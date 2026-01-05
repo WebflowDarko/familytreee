@@ -563,36 +563,44 @@ document.addEventListener("DOMContentLoaded", () => {
       const flow = FLOW[svc] || [];
       const nextSub = state.current.subIndex + 1;
 
+
+
+    // ✅ Faucet/Toilet: ako je NO na sink_fixtures_replace, preskoči faucet_toilet_details3
+if (svc === "faucet_toilet") {
+  const currentSubId = flow[state.current.subIndex];
+  const nextSubId = flow[nextSub];
+
+  if (currentSubId === "faucet_toilet_details2" && nextSubId === "faucet_toilet_details3") {
+    // čitaj iz aktivnog stepa (ti već imaš potvrdu da je ovo OK)
+    const active = document.querySelector(
+      `.step[data-step="service"][data-service="faucet_toilet"][data-sub="faucet_toilet_details2"]:not([hidden])`
+    );
+    const r = active?.querySelector('input[name="sink_fixtures_replace"]:checked');
+    const ans = (r?.value || "").trim().toLowerCase();
+
+    console.log("[SinkSkip@gotoNext] ans =", ans);
+
+    if (ans === "no") {
+      console.log("[SinkSkip@gotoNext] skipping details3");
+
+      state.completedServices.add("faucet_toilet");
+      const nxtSvc = firstUnfinishedService();
+      if (nxtSvc) gotoFirstSubOf(nxtSvc);
+      else showOnly("upload");
+      return; // 🔥 ovo prekida gotoNext, nema odlaska na details3
+    }
+  }
+}
+
+
+
+
+       
       console.log(`🧩 SERVICE '${svc}' | subIndex=${state.current.subIndex} | nextSub=${nextSub} | flow=`, flow);
 
 
 
-        // ✅ Faucet/Toilet skip: ako je "no" na sink_fixtures_replace, preskoči faucet_toilet_details3
-  if (svc === "faucet_toilet") {
-    const currentSubId = flow[state.current.subIndex];
-    const nextSubId = flow[nextSub];
-
-    if (currentSubId === "faucet_toilet_details2" && nextSubId === "faucet_toilet_details3") {
-      // čitaj samo iz aktivnog stepa
-      const activeStep = document.querySelector(
-        `.step[data-step="service"][data-service="faucet_toilet"]:not([hidden])`
-      );
-      const r = activeStep?.querySelector(`input[name="sink_fixtures_replace"]:checked`);
-      const ans = (r?.value || "").trim().toLowerCase();
-
-      console.log("[SinkSkip] answer=", ans);
-
-      if (ans === "no") {
-        console.log("[SinkSkip] skipping faucet_toilet_details3");
-
-        state.completedServices.add("faucet_toilet");
-        const nxtSvc = firstUnfinishedService();
-        if (nxtSvc) gotoFirstSubOf(nxtSvc);
-        else showOnly("upload");
-        return; // 🔥 bitno: prekini gotoNext ovde
-      }
-    }
-  }
+      
 
        
 
