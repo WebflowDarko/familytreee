@@ -565,6 +565,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
       console.log(`🧩 SERVICE '${svc}' | subIndex=${state.current.subIndex} | nextSub=${nextSub} | flow=`, flow);
 
+
+
+        // ✅ Faucet/Toilet skip: ako je "no" na sink_fixtures_replace, preskoči faucet_toilet_details3
+  if (svc === "faucet_toilet") {
+    const currentSubId = flow[state.current.subIndex];
+    const nextSubId = flow[nextSub];
+
+    if (currentSubId === "faucet_toilet_details2" && nextSubId === "faucet_toilet_details3") {
+      // čitaj samo iz aktivnog stepa
+      const activeStep = document.querySelector(
+        `.step[data-step="service"][data-service="faucet_toilet"]:not([hidden])`
+      );
+      const r = activeStep?.querySelector(`input[name="sink_fixtures_replace"]:checked`);
+      const ans = (r?.value || "").trim().toLowerCase();
+
+      console.log("[SinkSkip] answer=", ans);
+
+      if (ans === "no") {
+        console.log("[SinkSkip] skipping faucet_toilet_details3");
+
+        state.completedServices.add("faucet_toilet");
+        const nxtSvc = firstUnfinishedService();
+        if (nxtSvc) gotoFirstSubOf(nxtSvc);
+        else showOnly("upload");
+        return; // 🔥 bitno: prekini gotoNext ovde
+      }
+    }
+  }
+
+       
+
+       
       if (nextSub < flow.length) {
         showOnly({ type:'service', id: svc, subIndex: nextSub });
       } else {
