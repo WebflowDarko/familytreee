@@ -1198,39 +1198,68 @@ document.addEventListener("DOMContentLoaded", () => {
     updateVisibility();
   })();
 
-  /* =========================
-     Faucet/Toilet sink catalog show/hide
-     NOTE: your FLOW currently uses faucet_toilet_details3
-     If you truly have faucet_toilet_sink_catalog step in Webflow,
-     add it in FLOW and update selectors accordingly.
-  ========================= */
-  (function initSinkCatalogVisibility() {
-    const catalogStep = document.querySelector(
-      '.step[data-service="faucet_toilet"][data-sub="faucet_toilet_sink_catalog"]'
-    );
-    if (!catalogStep) return;
+  // Faucet/Toilet: skip faucet_toilet_details3 when sink_fixtures_replace = "no"
+(function initSinkFixturesSkip() {
+  const api = window.__wiz;
+  if (!api?.FLOW || !api?.state || !api?.gotoNext || !api?.showOnly) return;
 
-    function getVal() {
-      const r = document.querySelector('input[name="sink_fixtures_replace"]:checked');
-      return (r?.value || "").trim().toLowerCase();
-    }
+  const SERVICE = "faucet_toilet";
 
-    function updateVisibility() {
-      const isYes = getVal() === "yes";
-      catalogStep.hidden = !isYes;
+  const SUB1 = "faucet_toilet_details";
+  const SUB2 = "faucet_toilet_details2"; // pitanje Yes/No
+  const SUB3 = "faucet_toilet_details3"; // color scheme (preskoči kad je NO)
 
-      if (!isYes) {
-        catalogStep
-          .querySelectorAll('input[type="checkbox"], input[type="radio"]')
-          .forEach(i => i.checked = false);
+  const GROUP = "sink_fixtures_replace";
+
+  function getAnswer() {
+    const r = document.querySelector(`input[name="${GROUP}"]:checked`);
+    return (r?.value || "").trim().toLowerCase();
+  }
+
+  function shouldIncludeSub3() {
+    return getAnswer() === "yes";
+  }
+
+  function applyFlowRealtime() {
+    const include3 = shouldIncludeSub3();
+    api.FLOW[SERVICE] = include3 ? [SUB1, SUB2, SUB3] : [SUB1, SUB2];
+    console.log("[SinkSkip] FLOW.faucet_toilet =", api.FLOW[SERVICE]);
+
+    const cur = api.state.current;
+    if (!include3 && typeof cur === "object" && cur.type === "service" && cur.id === SERVICE) {
+      if (cur.subIndex >= 2) {
+        api.state.completedServices?.add?.(SERVICE);
+        const nextSvc = api.firstUnfinishedService?.() || null;
+        if (nextSvc && api.gotoFirstSubOf) api.gotoFirstSubOf(nextSvc);
+        else api.showOnly("upload");
       }
     }
+  }
 
-    document.addEventListener("change", (e) => {
-      if (e.target.matches('input[name="sink_fixtures_replace"]')) updateVisibility();
-    });
+  document.addEventListener("change", (e) => {
+    if (e.target.matches(`input[name="${GROUP}"]`)) applyFlowRealtime();
+  });
 
-    updateVisibility();
-  })();
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest('[data-action="next"]');
+    if (!btn) return;
+
+    const activeSub2 = document.querySelector(
+      `.step[data-step="service"][data-service="${SERVICE}"][data-sub="${SUB2}"]:not([hidden])`
+    );
+    if (!activeSub2) return;
+
+    applyFlowRealtime();
+
+    if (!shouldIncludeSub3()) {
+      e.preventDefault();
+      e.stopPropagation();
+      setTimeout(() => api.gotoNext(), 0);
+    }
+  }, true);
+
+  applyFlowRealtime();
+})();
+
 
 });
