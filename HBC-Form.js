@@ -1198,60 +1198,55 @@ document.addEventListener("DOMContentLoaded", () => {
     updateVisibility();
   })();
 
-  // Faucet/Toilet: skip faucet_toilet_details3 when sink_fixtures_replace = "no"
-(function initSinkFixturesSkip() {
+  // Faucet/Toilet: if sink_fixtures_replace = "no", skip the next faucet_toilet step (details3)
+(function initSinkFixturesSkipRobust() {
   const api = window.__wiz;
   if (!api?.FLOW || !api?.state || !api?.gotoNext || !api?.showOnly) return;
 
   const SERVICE = "faucet_toilet";
+  const GROUP = "sink_fixtures_replace";
 
   const SUB1 = "faucet_toilet_details";
-  const SUB2 = "faucet_toilet_details2"; // pitanje Yes/No
-  const SUB3 = "faucet_toilet_details3"; // color scheme (preskoči kad je NO)
-
-  const GROUP = "sink_fixtures_replace";
+  const SUB2 = "faucet_toilet_details2";
+  const SUB3 = "faucet_toilet_details3"; // ovaj hoćeš da preskočiš kad je NO
 
   function getAnswer() {
     const r = document.querySelector(`input[name="${GROUP}"]:checked`);
     return (r?.value || "").trim().toLowerCase();
   }
 
-  function shouldIncludeSub3() {
-    return getAnswer() === "yes";
-  }
-
   function applyFlowRealtime() {
-    const include3 = shouldIncludeSub3();
+    const include3 = getAnswer() === "yes";
+    // skrati flow kad je NO
     api.FLOW[SERVICE] = include3 ? [SUB1, SUB2, SUB3] : [SUB1, SUB2];
     console.log("[SinkSkip] FLOW.faucet_toilet =", api.FLOW[SERVICE]);
-
-    const cur = api.state.current;
-    if (!include3 && typeof cur === "object" && cur.type === "service" && cur.id === SERVICE) {
-      if (cur.subIndex >= 2) {
-        api.state.completedServices?.add?.(SERVICE);
-        const nextSvc = api.firstUnfinishedService?.() || null;
-        if (nextSvc && api.gotoFirstSubOf) api.gotoFirstSubOf(nextSvc);
-        else api.showOnly("upload");
-      }
-    }
   }
 
+  // Realtime kad korisnik promeni Yes/No
   document.addEventListener("change", (e) => {
     if (e.target.matches(`input[name="${GROUP}"]`)) applyFlowRealtime();
   });
 
+  // Presretni NEXT baš na step-u koji sadrži ovu radio grupu
   document.addEventListener("click", (e) => {
     const btn = e.target.closest('[data-action="next"]');
     if (!btn) return;
 
-    const activeSub2 = document.querySelector(
-      `.step[data-step="service"][data-service="${SERVICE}"][data-sub="${SUB2}"]:not([hidden])`
-    );
-    if (!activeSub2) return;
+    const activeStep = document.querySelector('.step:not([hidden])');
+    if (!activeStep) return;
+
+    // Mora biti faucet_toilet step + mora sadržati ovu radio grupu
+    const isFaucetToilet =
+      activeStep.dataset.step === "service" &&
+      activeStep.dataset.service === SERVICE;
+
+    const hasGroupInside = !!activeStep.querySelector(`input[name="${GROUP}"]`);
+    if (!isFaucetToilet || !hasGroupInside) return;
 
     applyFlowRealtime();
 
-    if (!shouldIncludeSub3()) {
+    // Ako je NO -> preskoči details3
+    if (getAnswer() === "no") {
       e.preventDefault();
       e.stopPropagation();
       setTimeout(() => api.gotoNext(), 0);
@@ -1260,6 +1255,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   applyFlowRealtime();
 })();
+
 
 
 });
