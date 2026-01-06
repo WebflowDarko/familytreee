@@ -267,6 +267,24 @@ function collectAllLineItems() {
     }
   }
 
+   // FAUCET / TOILET - TOILET QTY (130-1)
+const toiletQtyEl =
+  document.getElementById("toilet-qty") ||
+  document.querySelector('input[name="toilet_qty"]');
+
+if (toiletQtyEl) {
+  const qty = Number((toiletQtyEl.value || "").trim());
+
+  if (!isNaN(qty) && qty > 0) {
+    items.push({
+      serviceName: "Faucet / Toilet - Toilet Replacement",
+      itemId: "130-1",
+      qty
+    });
+  }
+}
+
+
   // EXTERIOR PAINT
   const exteriorYesNo = document.querySelector('input[name="home_exterior"]:checked');
   if (exteriorYesNo && (exteriorYesNo.value || "").trim().toLowerCase() === "yes") {
