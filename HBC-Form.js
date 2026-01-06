@@ -563,47 +563,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const flow = FLOW[svc] || [];
       const nextSub = state.current.subIndex + 1;
 
-
-
-    // ✅ Faucet/Toilet: ako je NO na sink_fixtures_replace, preskoči faucet_toilet_details3
-if (svc === "faucet_toilet") {
-  const currentSubId = flow[state.current.subIndex];
-  const nextSubId = flow[nextSub];
-
-  if (currentSubId === "faucet_toilet_details2" && nextSubId === "faucet_toilet_details3") {
-    // čitaj iz aktivnog stepa (ti već imaš potvrdu da je ovo OK)
-    const active = document.querySelector(
-      `.step[data-step="service"][data-service="faucet_toilet"][data-sub="faucet_toilet_details2"]:not([hidden])`
-    );
-    const r = active?.querySelector('input[name="sink_fixtures_replace"]:checked');
-    const ans = (r?.value || "").trim().toLowerCase();
-
-    console.log("[SinkSkip@gotoNext] ans =", ans);
-
-    if (ans === "no") {
-      console.log("[SinkSkip@gotoNext] skipping details3");
-
-      state.completedServices.add("faucet_toilet");
-      const nxtSvc = firstUnfinishedService();
-      if (nxtSvc) gotoFirstSubOf(nxtSvc);
-      else showOnly("upload");
-      return; // 🔥 ovo prekida gotoNext, nema odlaska na details3
-    }
-  }
-}
-
-
-
-
-       
       console.log(`🧩 SERVICE '${svc}' | subIndex=${state.current.subIndex} | nextSub=${nextSub} | flow=`, flow);
-
-
-
-      
-
-       
-
        
       if (nextSub < flow.length) {
         showOnly({ type:'service', id: svc, subIndex: nextSub });
@@ -1237,80 +1197,6 @@ if (svc === "faucet_toilet") {
 
     updateVisibility();
   })();
-
-  
-// Faucet/Toilet: skip details3 when sink_fixtures_replace = "no" (reads ONLY from active step)
-(function initSinkFixturesSkipSafe() {
-  const api = window.__wiz;
-  if (!api?.FLOW || !api?.state || !api?.gotoNext || !api?.showOnly) return;
-
-  const SERVICE = "faucet_toilet";
-  const GROUP = "sink_fixtures_replace";
-
-  const SUB1 = "faucet_toilet_details";
-  const SUB2 = "faucet_toilet_details2";
-  const SUB3 = "faucet_toilet_details3";
-
-  function getActiveStep() {
-    return document.querySelector(
-      `.step[data-step="service"][data-service="${SERVICE}"]:not([hidden])`
-    );
-  }
-
-  function getAnswerFromActiveStep() {
-    const step = getActiveStep();
-    if (!step) return "";
-    const r = step.querySelector(`input[name="${GROUP}"]:checked`);
-    return (r?.value || "").trim().toLowerCase();
-  }
-
-  function applyFlowRealtime() {
-    const ans = getAnswerFromActiveStep();
-    const include3 = ans === "yes";
-    api.FLOW[SERVICE] = include3 ? [SUB1, SUB2, SUB3] : [SUB1, SUB2];
-    console.log("[SinkSkip] answer=", ans, "FLOW.faucet_toilet=", api.FLOW[SERVICE]);
-  }
-
-  document.addEventListener("change", (e) => {
-    if (e.target.matches(`input[name="${GROUP}"]`)) {
-      applyFlowRealtime();
-    }
-  });
-
-  // presretni NEXT samo kad smo na faucet_toilet step-u koji sadrži ovu radio grupu
-  document.addEventListener("click", (e) => {
-    const btn = e.target.closest('[data-action="next"]');
-    if (!btn) return;
-
-    const step = getActiveStep();
-    if (!step) return;
-
-    const hasGroup = !!step.querySelector(`input[name="${GROUP}"]`);
-    if (!hasGroup) return;
-
-    applyFlowRealtime();
-
-    const ans = getAnswerFromActiveStep();
-    if (ans === "no") {
-      // ako smo na SUB2 i sledeće bi bilo SUB3, preskoči
-      const cur = api.state.current;
-      const flow = api.FLOW[SERVICE] || [];
-
-      if (typeof cur === "object" && cur.type === "service" && cur.id === SERVICE) {
-        const curSub = flow[cur.subIndex];
-        const nextSub = flow[cur.subIndex + 1];
-
-        if (curSub === SUB2 && nextSub === SUB3) {
-          e.preventDefault();
-          e.stopPropagation();
-          setTimeout(() => api.gotoNext(), 0);
-        }
-      }
-    }
-  }, true);
-
-  applyFlowRealtime();
-})();
 
 
 
