@@ -1093,74 +1093,63 @@ document.addEventListener("DOMContentLoaded", () => {
     applyFlowRealtime();
   })();
 
-/* =========================
-   Faucet/Toilet flow (ROBUST skip)
-   - If sink_fixtures_replace = "no" on details2:
-     complete service and jump to next service/upload
-   - If "yes": include details3 normally
-========================= */
-(function initFaucetToiletFlow() {
+// Faucet/Toilet flow (Cabinet-style)
+(function initFaucetToiletFlowCabinetStyle() {
   const api = window.__wiz;
-  if (!api?.FLOW || !api?.state || !api?.showOnly || !api?.firstUnfinishedService || !api?.gotoFirstSubOf) return;
+  if (!api?.FLOW || !api?.state || !api?.showOnly) return;
 
-  const SERVICE = "faucet_toilet";
   const GROUP   = "sink_fixtures_replace";
+  const SERVICE = "faucet_toilet";
 
   const SUB1 = "faucet_toilet_details";
   const SUB2 = "faucet_toilet_details2";
   const SUB3 = "faucet_toilet_details3";
 
-  function getAnswer() {
-    // Čitamo direktno iz details2 stepa (radi i kad Webflow zadrži elemente u DOM-u)
-    const r = document.querySelector(
-      `.step[data-step="service"][data-service="${SERVICE}"][data-sub="${SUB2}"] input[name="${GROUP}"]:checked`
+  function getVal() {
+    // čitaj iz active details2 stepa (bitno!)
+    const activeStep = document.querySelector(
+      `.step[data-step="service"][data-service="${SERVICE}"][data-sub="${SUB2}"]:not([hidden])`
     );
+
+    const r = activeStep
+      ? activeStep.querySelector(`input[name="${GROUP}"]:checked`)
+      : document.querySelector(`input[name="${GROUP}"]:checked`);
+
     return (r?.value || "").trim().toLowerCase();
   }
 
-  function applyFlow() {
-    const ans = getAnswer();
-    api.FLOW[SERVICE] = (ans === "yes") ? [SUB1, SUB2, SUB3] : [SUB1, SUB2];
-    console.log("[FaucetToiletFlow] answer=", ans, "FLOW.faucet_toilet=", api.FLOW[SERVICE]);
+  function includeStep3() {
+    return getVal() === "yes";
   }
 
-  // realtime update kad se promeni radio
+  function applyFlow() {
+    const include3 = includeStep3();
+
+    // ✅ Isto kao Cabinet: menjamo FLOW realtime
+    api.FLOW[SERVICE] = include3 ? [SUB1, SUB2, SUB3] : [SUB1, SUB2];
+    console.log("[FaucetCabinetStyle] FLOW.faucet_toilet =", api.FLOW[SERVICE]);
+
+    // Ako smo nekako već na subIndex >= 2 a NO je izabrano, vrati / završi servis
+    const cur = api.state.current;
+    if (!include3 && typeof cur === "object" && cur.type === "service" && cur.id === SERVICE) {
+      if (cur.subIndex >= 2) {
+        api.state.completedServices?.add?.(SERVICE);
+        const nextSvc = api.firstUnfinishedService?.() || null;
+        if (nextSvc && api.gotoFirstSubOf) api.gotoFirstSubOf(nextSvc);
+        else api.showOnly("upload");
+      }
+    }
+  }
+
+  // realtime: kad se klikne Yes/No
   document.addEventListener("change", (e) => {
     if (e.target.matches(`input[name="${GROUP}"]`)) applyFlow();
   });
 
-  // presretni NEXT samo kad smo NA details2 i odgovor je NO
-  document.addEventListener("click", (e) => {
-    const btn = e.target.closest('[data-action="next"]');
-    if (!btn) return;
-
-    const cur = api.state.current;
-    if (!(typeof cur === "object" && cur.type === "service" && cur.id === SERVICE)) return;
-
-    const flow = api.FLOW[SERVICE] || [];
-    const curSub = flow[cur.subIndex];
-
-    if (curSub !== SUB2) return;
-
-    const ans = getAnswer();
-    if (ans !== "no") return;
-
-    // STOP default gotoNext and do our skip
-    e.preventDefault();
-    e.stopPropagation();
-
-    console.log("[FaucetToiletFlow] SKIP details3 (NO) -> complete service");
-
-    api.state.completedServices.add(SERVICE);
-
-    const nextSvc = api.firstUnfinishedService();
-    if (nextSvc) api.gotoFirstSubOf(nextSvc);
-    else api.showOnly("upload");
-  }, true);
-
   // init
   applyFlow();
 })();
+
 
    
   // Exterior flow
