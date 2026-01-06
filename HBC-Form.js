@@ -285,6 +285,41 @@ if (toiletQtyEl) {
 }
 
 
+   // FAUCET / TOILET — Kitchen sink fixture (130-2/3/4)
+  const kitchenPick = document.querySelector('input[name="kitchen_sink_fixture"]:checked');
+  if (kitchenPick) {
+    const itemId = (kitchenPick.dataset.itemId || kitchenPick.value || "").trim();
+    if (itemId) {
+      items.push({
+        serviceName: "Kitchen Sink Fixture Replacement",
+        itemId,
+        qty: 1
+      });
+    }
+  }
+
+   // FAUCET / TOILET — Bathroom vanity faucet (130-5/6/7) × bathroom count
+const vanityPick = document.querySelector('input[name="bathroom_vanity_faucet"]:checked');
+
+const bathroomCountEl =
+  document.getElementById("bathroom-count") ||
+  document.querySelector('input[name="bathroom_count"]');
+
+const bathroomQty = bathroomCountEl ? Number((bathroomCountEl.value || "").trim()) : NaN;
+
+if (vanityPick) {
+  const itemId = (vanityPick.dataset.itemId || vanityPick.value || "").trim();
+
+  if (itemId && !isNaN(bathroomQty) && bathroomQty > 0) {
+    items.push({
+      serviceName: "Bathroom Vanity Sink Faucet Replacement",
+      itemId,
+      qty: bathroomQty
+    });
+  }
+}
+
+
   // EXTERIOR PAINT
   const exteriorYesNo = document.querySelector('input[name="home_exterior"]:checked');
   if (exteriorYesNo && (exteriorYesNo.value || "").trim().toLowerCase() === "yes") {
