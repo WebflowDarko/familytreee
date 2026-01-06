@@ -320,6 +320,39 @@ if (vanityPick) {
 }
 
 
+     // DOOR HARDWARE (finish radio + qty inputs)
+  const doorFinish = document.querySelector('input[name="door_hardware_finish"]:checked');
+
+  if (doorFinish) {
+    const qtyNoLockEl  = document.querySelector('input[data-qty="no_lock"]');
+    const qtyWithLockEl = document.querySelector('input[data-qty="with_lock"]');
+
+    const qtyNoLock  = qtyNoLockEl ? Number((qtyNoLockEl.value || "").trim()) : 0;
+    const qtyWithLock = qtyWithLockEl ? Number((qtyWithLockEl.value || "").trim()) : 0;
+
+    const itemNoLock  = (doorFinish.dataset.itemNoLock || "").trim();
+    const itemWithLock = (doorFinish.dataset.itemWithLock || "").trim();
+
+    // No lock
+    if (itemNoLock && !isNaN(qtyNoLock) && qtyNoLock > 0) {
+      items.push({
+        serviceName: "Door Hardware",
+        itemId: itemNoLock,
+        qty: qtyNoLock
+      });
+    }
+
+    // With lock
+    if (itemWithLock && !isNaN(qtyWithLock) && qtyWithLock > 0) {
+      items.push({
+        serviceName: "Door Hardware",
+        itemId: itemWithLock,
+        qty: qtyWithLock
+      });
+    }
+  }
+
+
   // EXTERIOR PAINT
   const exteriorYesNo = document.querySelector('input[name="home_exterior"]:checked');
   if (exteriorYesNo && (exteriorYesNo.value || "").trim().toLowerCase() === "yes") {
