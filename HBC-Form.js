@@ -560,6 +560,35 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (typeof state.current === 'object' && state.current.type === 'service') {
       const svc  = state.current.id;
+
+// ✅ Faucet/Toilet: ako je NO na details2, preskoči details3
+if (svc === "faucet_toilet") {
+  const SUB2  = "faucet_toilet_details2";
+  const GROUP = "sink_fixtures_replace";
+
+  const curSubId = (FLOW[svc] || [])[state.current.subIndex];
+
+  if (curSubId === SUB2) {
+    const active = document.querySelector(
+      `.step[data-step="service"][data-service="faucet_toilet"][data-sub="${SUB2}"]:not([hidden])`
+    );
+
+    const r = active?.querySelector(`input[name="${GROUP}"]:checked`);
+    const ans = (r?.value || "").trim().toLowerCase();
+
+    console.log("[FaucetSkip@gotoNext] ans =", ans);
+
+    if (ans === "no") {
+      // skrati FLOW da nema details3
+      FLOW[svc] = ["faucet_toilet_details", "faucet_toilet_details2"];
+    } else if (ans === "yes") {
+      // vrati normalan flow
+      FLOW[svc] = ["faucet_toilet_details", "faucet_toilet_details2", "faucet_toilet_details3"];
+    }
+  }
+}
+
+       
       const flow = FLOW[svc] || [];
       const nextSub = state.current.subIndex + 1;
 
@@ -1093,62 +1122,7 @@ document.addEventListener("DOMContentLoaded", () => {
     applyFlowRealtime();
   })();
 
-// Faucet/Toilet flow (Cabinet-style)
-(function initFaucetToiletFlowCabinetStyle() {
-  const api = window.__wiz;
-  if (!api?.FLOW || !api?.state || !api?.showOnly) return;
 
-  const GROUP   = "sink_fixtures_replace";
-  const SERVICE = "faucet_toilet";
-
-  const SUB1 = "faucet_toilet_details";
-  const SUB2 = "faucet_toilet_details2";
-  const SUB3 = "faucet_toilet_details3";
-
-  function getVal() {
-    // čitaj iz active details2 stepa (bitno!)
-    const activeStep = document.querySelector(
-      `.step[data-step="service"][data-service="${SERVICE}"][data-sub="${SUB2}"]:not([hidden])`
-    );
-
-    const r = activeStep
-      ? activeStep.querySelector(`input[name="${GROUP}"]:checked`)
-      : document.querySelector(`input[name="${GROUP}"]:checked`);
-
-    return (r?.value || "").trim().toLowerCase();
-  }
-
-  function includeStep3() {
-    return getVal() === "yes";
-  }
-
-  function applyFlow() {
-    const include3 = includeStep3();
-
-    // ✅ Isto kao Cabinet: menjamo FLOW realtime
-    api.FLOW[SERVICE] = include3 ? [SUB1, SUB2, SUB3] : [SUB1, SUB2];
-    console.log("[FaucetCabinetStyle] FLOW.faucet_toilet =", api.FLOW[SERVICE]);
-
-    // Ako smo nekako već na subIndex >= 2 a NO je izabrano, vrati / završi servis
-    const cur = api.state.current;
-    if (!include3 && typeof cur === "object" && cur.type === "service" && cur.id === SERVICE) {
-      if (cur.subIndex >= 2) {
-        api.state.completedServices?.add?.(SERVICE);
-        const nextSvc = api.firstUnfinishedService?.() || null;
-        if (nextSvc && api.gotoFirstSubOf) api.gotoFirstSubOf(nextSvc);
-        else api.showOnly("upload");
-      }
-    }
-  }
-
-  // realtime: kad se klikne Yes/No
-  document.addEventListener("change", (e) => {
-    if (e.target.matches(`input[name="${GROUP}"]`)) applyFlow();
-  });
-
-  // init
-  applyFlow();
-})();
 
 
    
