@@ -695,6 +695,47 @@ if (svc === "faucet_toilet") {
   updateSelectedOrder();
   showOnly('intro');
 
+   // =========================
+// DEBUG (temporary)
+// =========================
+window.__DBG = window.__DBG || {
+  nextClicks: 0,
+  gotoNextCalls: 0
+};
+
+function dbgActiveStep() {
+  const s = document.querySelector('.step:not([hidden])');
+  if (!s) return { step: "none" };
+  return {
+    step: s.dataset.step,
+    service: s.dataset.service,
+    sub: s.dataset.sub
+  };
+}
+
+// Log EVERY click on NEXT in capture + bubble to detect duplicates
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest('[data-action="next"]');
+  if (!btn) return;
+  window.__DBG.nextClicks += 1;
+  console.log("🟧 [DBG] NEXT click (CAPTURE/BUBBLE) count =", window.__DBG.nextClicks, "active=", dbgActiveStep());
+}, true);
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest('[data-action="next"]');
+  if (!btn) return;
+  console.log("🟨 [DBG] NEXT click (BUBBLE) active=", dbgActiveStep());
+}, false);
+
+// Wrap gotoNext so we can count calls and see who is calling it
+const __origGotoNext = gotoNext;
+gotoNext = function() {
+  window.__DBG.gotoNextCalls += 1;
+  console.log("🟥 [DBG] gotoNext CALL #", window.__DBG.gotoNextCalls, "state.current=", state.current, "active=", dbgActiveStep());
+  return __origGotoNext.apply(this, arguments);
+};
+window.__wiz.gotoNext = gotoNext;
+
+
   /* =========================
      UPLOAD BIND
   ========================= */
