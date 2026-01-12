@@ -8,17 +8,47 @@ const ROOT_FOLDER   = "wizard_uploads";
 /* =========================
    SHEETS ENDPOINT
 ========================= */
-const SHEET_ENDPOINT = "https://script.google.com/macros/s/AKfycbzv1cFiDF36XWzw1Veo5w_ABF7mMHJg-bIFTVoH5lJBIoz5PhIFDHGMcZDFo9beskkH/exec";
+const SHEET_ENDPOINT = "https://script.google.com/macros/s/AKfycbwtGRjTuwN93-XqNWTGAdcQYgfl8VEeU4SN4uX4YN38NR-jEX33-Fj8u0Zg4ghVW7H0/exec";
 
 /* =========================
    GLOBAL STATE
 ========================= */
-window.wizardState = window.wizardState || {
-  sessionId  : window.wizardState?.sessionId || (crypto?.randomUUID?.() || String(Date.now())),
-  uploadUrls : {},   // { final_upload: [url1,url2], carpet:[...], ... }
-  // clientName: "Test User",
-  // homeSqft: 1234,
-};
+window.wizardState = window.wizardState || {};
+window.wizardState.sessionId  = window.wizardState.sessionId || (crypto?.randomUUID?.() || String(Date.now()));
+window.wizardState.uploadUrls = window.wizardState.uploadUrls || {};
+window.wizardState.clientName = window.wizardState.clientName || "";
+
+/* =========================
+   HELPERS: CLIENT NAME SYNC
+========================= */
+function readClientNameFromDOM() {
+  const el =
+    document.getElementById("client-name") ||
+    document.querySelector('input[name="client_name"]') ||
+    document.querySelector('input[name="clientName"]') ||
+    document.querySelector('input[name="name"]');
+
+  const val = (el?.value || "").trim();
+  return val;
+}
+
+function syncClientNameToState() {
+  const v = readClientNameFromDOM();
+  if (v) window.wizardState.clientName = v;
+}
+
+document.addEventListener("input", (e) => {
+  const t = e.target;
+  if (!t) return;
+  if (
+    t.id === "client-name" ||
+    t.name === "client_name" ||
+    t.name === "clientName" ||
+    t.name === "name"
+  ) {
+    syncClientNameToState();
+  }
+});
 
 /* =========================
    CLOUDINARY HELPER
@@ -37,7 +67,7 @@ async function uploadServicePhoto(file, serviceId, sessionId) {
   });
 
   if (!res.ok) {
-    const t = await res.text().catch(()=> "");
+    const t = await res.text().catch(() => "");
     throw new Error("Cloudinary upload failed: " + t);
   }
   return res.json();
@@ -57,7 +87,7 @@ async function sendLineToSheet(opts) {
 
   if (!itemId) {
     console.warn("[Sheet] Missing itemId, skip.");
-    return;
+    return false;
   }
 
   const params = new URLSearchParams();
@@ -73,19 +103,21 @@ async function sendLineToSheet(opts) {
     body: params
   });
 
-  const text = await res.text();
+  const text = await res.text().catch(() => "");
   console.log("[Sheet] Response", { status: res.status, body: text });
 
   return res.ok;
 }
 
+/* =========================
+   DESCRIPTION BUILDERS
+========================= */
 function buildSubDescriptionForParent(parentItemId) {
   const subs = document.querySelectorAll(
     `input[type="checkbox"][data-parent-item="${parentItemId}"]:checked`
   );
 
   const parts = [];
-
   subs.forEach(sub => {
     const label =
       (sub.dataset.desc || "").trim() ||
@@ -129,7 +161,6 @@ function buildInputsDescriptionForParent(parentItemId) {
   });
 
   const parts = [];
-
   inputs.forEach(el => {
     const val = (el.value || "").trim();
     if (!val) return;
@@ -141,6 +172,9 @@ function buildInputsDescriptionForParent(parentItemId) {
   return parts.join(", ");
 }
 
+/* =========================
+   SQFT HELPERS
+========================= */
 function getHomeSqft() {
   if (window.wizardState && window.wizardState.homeSqft) {
     const v = Number(window.wizardState.homeSqft);
@@ -208,11 +242,7 @@ function collectAllLineItems() {
     const sqft = getHomeSqft();
     if (!isNaN(sqft) && sqft > 0) {
       const bulbItemId = getBulbItemIdBySqft(sqft);
-      if (bulbItemId) {
-        items.push({ serviceName: "Bulb Update", itemId: bulbItemId, qty: 1 });
-      }
-    } else {
-      console.warn("[Collect] Bulb Update: missing valid sqft");
+      if (bulbItemId) items.push({ serviceName: "Bulb Update", itemId: bulbItemId, qty: 1 });
     }
   }
 
@@ -242,8 +272,6 @@ function collectAllLineItems() {
         qty: insidePaintQty,
         description: schemeDescription
       });
-    } else {
-      console.warn("[Collect] Inside Paint: missing valid sqft");
     }
   });
 
@@ -255,103 +283,65 @@ function collectAllLineItems() {
 
   if (cabinetAnswer && (cabinetAnswer.value || "").trim().toLowerCase() === "yes") {
     const doorsQty = cabinetDoorsEl ? Number((cabinetDoorsEl.value || "").trim()) : NaN;
-
     if (!isNaN(doorsQty) && doorsQty > 0) {
-      items.push({
-        serviceName: "Inside Paint - Cabinets",
-        itemId: "110-3",
-        qty: doorsQty
-      });
-    } else {
-      console.warn("[Collect] Cabinets: yes selected but doors qty invalid");
+      items.push({ serviceName: "Inside Paint - Cabinets", itemId: "110-3", qty: doorsQty });
     }
   }
 
-   // FAUCET / TOILET - TOILET QTY (130-1)
-const toiletQtyEl =
-  document.getElementById("toilet-qty") ||
-  document.querySelector('input[name="toilet_qty"]');
+  // FAUCET / TOILET - TOILET QTY (130-1)
+  const toiletQtyEl =
+    document.getElementById("toilet-qty") ||
+    document.querySelector('input[name="toilet_qty"]');
 
-if (toiletQtyEl) {
-  const qty = Number((toiletQtyEl.value || "").trim());
-
-  if (!isNaN(qty) && qty > 0) {
-    items.push({
-      serviceName: "Faucet / Toilet - Toilet Replacement",
-      itemId: "130-1",
-      qty
-    });
+  if (toiletQtyEl) {
+    const qty = Number((toiletQtyEl.value || "").trim());
+    if (!isNaN(qty) && qty > 0) {
+      items.push({ serviceName: "Faucet / Toilet - Toilet Replacement", itemId: "130-1", qty });
+    }
   }
-}
 
-
-   // FAUCET / TOILET — Kitchen sink fixture (130-2/3/4)
+  // Kitchen sink fixture (130-2/3/4)
   const kitchenPick = document.querySelector('input[name="kitchen_sink_fixture"]:checked');
   if (kitchenPick) {
     const itemId = (kitchenPick.dataset.itemId || kitchenPick.value || "").trim();
-    if (itemId) {
-      items.push({
-        serviceName: "Kitchen Sink Fixture Replacement",
-        itemId,
-        qty: 1
-      });
+    if (itemId) items.push({ serviceName: "Kitchen Sink Fixture Replacement", itemId, qty: 1 });
+  }
+
+  // Bathroom vanity faucet (130-5/6/7) × bathroom count
+  const vanityPick = document.querySelector('input[name="bathroom_vanity_faucet"]:checked');
+
+  const bathroomCountEl =
+    document.getElementById("bathroom-count") ||
+    document.querySelector('input[name="bathroom_count"]');
+
+  const bathroomQty = bathroomCountEl ? Number((bathroomCountEl.value || "").trim()) : NaN;
+
+  if (vanityPick) {
+    const itemId = (vanityPick.dataset.itemId || vanityPick.value || "").trim();
+    if (itemId && !isNaN(bathroomQty) && bathroomQty > 0) {
+      items.push({ serviceName: "Bathroom Vanity Sink Faucet Replacement", itemId, qty: bathroomQty });
     }
   }
 
-   // FAUCET / TOILET — Bathroom vanity faucet (130-5/6/7) × bathroom count
-const vanityPick = document.querySelector('input[name="bathroom_vanity_faucet"]:checked');
-
-const bathroomCountEl =
-  document.getElementById("bathroom-count") ||
-  document.querySelector('input[name="bathroom_count"]');
-
-const bathroomQty = bathroomCountEl ? Number((bathroomCountEl.value || "").trim()) : NaN;
-
-if (vanityPick) {
-  const itemId = (vanityPick.dataset.itemId || vanityPick.value || "").trim();
-
-  if (itemId && !isNaN(bathroomQty) && bathroomQty > 0) {
-    items.push({
-      serviceName: "Bathroom Vanity Sink Faucet Replacement",
-      itemId,
-      qty: bathroomQty
-    });
-  }
-}
-
-
-     // DOOR HARDWARE (finish radio + qty inputs)
+  // DOOR HARDWARE
   const doorFinish = document.querySelector('input[name="door_hardware_finish"]:checked');
-
   if (doorFinish) {
-    const qtyNoLockEl  = document.querySelector('input[data-qty="no_lock"]');
+    const qtyNoLockEl   = document.querySelector('input[data-qty="no_lock"]');
     const qtyWithLockEl = document.querySelector('input[data-qty="with_lock"]');
 
-    const qtyNoLock  = qtyNoLockEl ? Number((qtyNoLockEl.value || "").trim()) : 0;
+    const qtyNoLock   = qtyNoLockEl ? Number((qtyNoLockEl.value || "").trim()) : 0;
     const qtyWithLock = qtyWithLockEl ? Number((qtyWithLockEl.value || "").trim()) : 0;
 
-    const itemNoLock  = (doorFinish.dataset.itemNoLock || "").trim();
+    const itemNoLock   = (doorFinish.dataset.itemNoLock || "").trim();
     const itemWithLock = (doorFinish.dataset.itemWithLock || "").trim();
 
-    // No lock
     if (itemNoLock && !isNaN(qtyNoLock) && qtyNoLock > 0) {
-      items.push({
-        serviceName: "Door Hardware",
-        itemId: itemNoLock,
-        qty: qtyNoLock
-      });
+      items.push({ serviceName: "Door Hardware", itemId: itemNoLock, qty: qtyNoLock });
     }
-
-    // With lock
     if (itemWithLock && !isNaN(qtyWithLock) && qtyWithLock > 0) {
-      items.push({
-        serviceName: "Door Hardware",
-        itemId: itemWithLock,
-        qty: qtyWithLock
-      });
+      items.push({ serviceName: "Door Hardware", itemId: itemWithLock, qty: qtyWithLock });
     }
   }
-
 
   // EXTERIOR PAINT
   const exteriorYesNo = document.querySelector('input[name="home_exterior"]:checked');
@@ -362,12 +352,7 @@ if (vanityPick) {
     let itemId = "";
     if (storyVal.includes("single")) itemId = "110-4";
     else if (storyVal.includes("two")) itemId = "110-5";
-
-    if (itemId) {
-      items.push({ serviceName: "Exterior Paint", itemId, qty: 1 });
-    } else {
-      console.warn("[Collect] Exterior Paint: missing single/two selection");
-    }
+    if (itemId) items.push({ serviceName: "Exterior Paint", itemId, qty: 1 });
   }
 
   // CABINET HARDWARE
@@ -392,20 +377,16 @@ if (vanityPick) {
   }
 
   // LANDSCAPING
-  const landscapingMain = document.querySelectorAll('input[name="landscaping_services"]:checked');
-  landscapingMain.forEach(main => {
+  document.querySelectorAll('input[name="landscaping_services"]:checked').forEach(main => {
     const itemId = (main.dataset.itemId || "").trim();
     if (!itemId) return;
-
     const serviceName = (main.dataset.serviceName || "").trim() || "Landscaping";
     const inputsDesc = buildInputsDescriptionForParent(itemId);
-
     items.push({ serviceName, itemId, qty: 1, description: inputsDesc });
   });
 
   // CLEANING
   const cleaningMain = document.querySelectorAll('input[name="cleaning_services"]:checked');
-
   function getHomeSqftValue() {
     const el = document.getElementById("home-sqft");
     const num = Number((el?.value || "").trim());
@@ -417,40 +398,30 @@ if (vanityPick) {
     if (!itemId) return;
 
     const serviceName = (main.dataset.serviceName || "").trim() || "Cleaning";
-
     let qty = 1;
     let description = "";
 
     if (itemId === "120-1" || itemId === "120-2") {
       const sqft = getHomeSqftValue();
-      if (isNaN(sqft)) {
-        console.warn("[Cleaning] Missing home sqft for", itemId);
-        return;
-      }
+      if (isNaN(sqft)) return;
       qty = sqft;
-      description = "";
     } else {
       const subDesc = buildSubDescriptionForParent(itemId);
       const inputsDesc = buildInputsDescriptionForParent(itemId);
-
       if (subDesc && inputsDesc) description = `${subDesc}, ${inputsDesc}`;
       else if (subDesc) description = subDesc;
       else if (inputsDesc) description = inputsDesc;
-
-      qty = 1;
     }
 
     items.push({ serviceName, itemId, qty, description });
   });
 
   // HANDYMAN
-  const handymanMain = document.querySelectorAll('input[name="handyman_services"]:checked');
-  handymanMain.forEach(main => {
+  document.querySelectorAll('input[name="handyman_services"]:checked').forEach(main => {
     const itemId = (main.dataset.itemId || main.getAttribute("data-item-id") || "").trim();
     if (!itemId) return;
 
     const serviceName = (main.dataset.serviceName || "").trim() || "Handy-Man Service";
-
     const subDesc = buildSubDescriptionForParent(itemId);
     const inputsDesc = buildInputsDescriptionForParent(itemId);
 
@@ -468,20 +439,17 @@ if (vanityPick) {
     items.push({ serviceName: "Handy-Man - Other", itemId: "125-7", qty: 1, description: handymanOtherVal });
   }
 
-  // 3) LIGHT / FAN FIXTURES catalog
-  const checkedFixtures = document.querySelectorAll(".fixture-checkbox:checked");
-  checkedFixtures.forEach(cb => {
+  // LIGHT / FAN FIXTURES catalog
+  document.querySelectorAll(".fixture-checkbox:checked").forEach(cb => {
     const itemId = cb.dataset.itemId;
-    const qtyRaw = cb.dataset.qty || "1";
-    const qtyNum = Number(qtyRaw);
+    const qtyNum = Number(cb.dataset.qty || "1");
+    if (!itemId) return;
 
-    if (itemId) {
-      items.push({
-        serviceName: "Light / Fan Fixtures",
-        itemId,
-        qty: (!isNaN(qtyNum) && qtyNum > 0) ? qtyNum : 1
-      });
-    }
+    items.push({
+      serviceName: "Light / Fan Fixtures",
+      itemId,
+      qty: (!isNaN(qtyNum) && qtyNum > 0) ? qtyNum : 1
+    });
   });
 
   console.log("[Collect] Final items:", items);
@@ -492,654 +460,13 @@ if (vanityPick) {
    MAIN INIT (ONE DOMContentLoaded)
 ========================= */
 document.addEventListener("DOMContentLoaded", () => {
-
-  /* =========================
-     WIZARD CORE
-  ========================= */
-  const root = document.querySelector('#wizard');
+  const root = document.querySelector("#wizard");
   if (!root) return;
 
-  // FLOW definition (shared)
-  const FLOW = {
-    carpet:         ['carpet_details', 'carpet_details2'],
-    light:          ['light_questions','light_type'],
-    inside_paint:   ['paint_details', 'light_questions2', 'color_scheme'],
-    exterior_paint: ['ext_paint', 'ext_paint2'],
-    cabinet_hardware: ['replace_question', 'counts', 'finish'],
-    door_hardware: ['door_details','door_style'],
-    cleaning: ['cleaning_details'],
-    landscaping: ['landscaping_details'],
-    handyman: ['handyman_details'],
-    faucet_toilet: ['faucet_toilet_details', 'faucet_toilet_details2', 'faucet_toilet_details3']
-  };
+  // sync initial values
+  syncClientNameToState();
 
-  const state = {
-    current: 'intro',
-    selectedOrder: [],
-    completedServices: new Set(),
-  };
-
-  const q  = (sel, ctx = document) => ctx.querySelector(sel);
-  const qa = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
-  const steps = qa('.step', root);
-
-  function logState(label="STATE") {
-    console.log(`🟦 [${label}] current=`, state.current,
-      "| selectedOrder=", state.selectedOrder,
-      "| completedServices=", Array.from(state.completedServices));
-  }
-
-  function showOnly(target) {
-    console.log("➡️ showOnly:", target);
-
-    let mode = target;
-    let svcId = null, subId = null;
-
-    if (typeof target === 'object' && target?.type === 'service') {
-      svcId = target.id;
-      const idx = target.subIndex ?? 0;
-      subId = (FLOW[svcId] || [])[idx];
-      mode = 'service';
-      if (!subId) console.warn(`⚠️ FLOW missing substep index=${idx} for service="${svcId}"`);
-    }
-
-    steps.forEach(div => {
-      const kind = div.dataset.step;
-      let match = false;
-
-      if (mode === 'service') {
-        match = (kind === 'service'
-          && div.dataset.service === svcId
-          && div.dataset.sub === subId);
-      } else {
-        match = (kind === mode);
-      }
-
-      div.hidden = !match;
-      if (match) console.log(`✅ Showing step [${kind}]`, div.dataset);
-    });
-
-    state.current = (mode === 'service')
-      ? { type:'service', id: svcId, subIndex: target.subIndex ?? 0 }
-      : mode;
-
-    renderProgress();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    logState("AFTER showOnly");
-  }
-
-  function getSelected() {
-    const selected = qa('input[name="services"][type="checkbox"]', root)
-      .filter(b => b.checked)
-      .map(b => b.dataset.service);
-    console.log("🟨 Selected services:", selected);
-    return selected;
-  }
-
-  function updateSelectedOrder() {
-    const now = getSelected();
-    now.forEach(v => { if (!state.selectedOrder.includes(v)) state.selectedOrder.push(v); });
-    state.selectedOrder = state.selectedOrder.filter(v => now.includes(v));
-    for (const s of Array.from(state.completedServices)) {
-      if (!state.selectedOrder.includes(s)) state.completedServices.delete(s);
-    }
-    console.log("🔄 selectedOrder:", state.selectedOrder);
-  }
-
-  function firstUnfinishedService() {
-    const f = state.selectedOrder.find(id => !state.completedServices.has(id)) || null;
-    console.log("🧭 firstUnfinishedService =", f);
-    return f;
-  }
-
-  function gotoFirstSubOf(serviceId) {
-    console.log(`🚀 gotoFirstSubOf(${serviceId})`);
-    showOnly({ type:'service', id: serviceId, subIndex: 0 });
-  }
-
-  function gotoSuccess() { console.log("🎉 gotoSuccess"); showOnly('success'); }
-
-  function validateIntro() {
-    const zip = q('input[name="zip"]', root);
-    if (zip && zip.value && zip.getAttribute('pattern')) {
-      const re = new RegExp(zip.getAttribute('pattern'));
-      if (!re.test(zip.value)) {
-        alert('Please enter a valid ZIP.');
-        zip.focus();
-        return false;
-      }
-    }
-    return true;
-  }
-
-  function ensureSelectionBeforeNext() {
-    if (!state.selectedOrder.length) {
-      alert('Please select at least one service to continue.');
-      return false;
-    }
-    return true;
-  }
-
-  function gotoNext() {
-    console.log("➡️ gotoNext. current=", state.current);
-    logState("BEFORE gotoNext");
-
-    if (state.current === 'intro') {
-      if (!validateIntro()) return;
-      showOnly('select'); return;
-    }
-
-    if (state.current === 'select') {
-      updateSelectedOrder();
-      if (!ensureSelectionBeforeNext()) return;
-      const first = firstUnfinishedService();
-      if (first) gotoFirstSubOf(first);
-      else showOnly('upload');
-      return;
-    }
-
-    if (state.current === 'upload') {
-      gotoSuccess(); return;
-    }
-
-    if (state.current === 'success') return;
-
-    if (typeof state.current === 'object' && state.current.type === 'service') {
-      const svc  = state.current.id;
-
-// ✅ Faucet/Toilet: ako je NO na details2, preskoči details3
-if (svc === "faucet_toilet") {
-  const SUB2  = "faucet_toilet_details2";
-  const GROUP = "sink_fixtures_replace";
-
-  const curSubId = (FLOW[svc] || [])[state.current.subIndex];
-
-  if (curSubId === SUB2) {
-    const active = document.querySelector(
-      `.step[data-step="service"][data-service="faucet_toilet"][data-sub="${SUB2}"]:not([hidden])`
-    );
-
-    const r = active?.querySelector(`input[name="${GROUP}"]:checked`);
-    const ans = (r?.value || "").trim().toLowerCase();
-
-    console.log("[FaucetSkip@gotoNext] ans =", ans);
-
-    if (ans === "no") {
-      // skrati FLOW da nema details3
-      FLOW[svc] = ["faucet_toilet_details", "faucet_toilet_details2"];
-    } else if (ans === "yes") {
-      // vrati normalan flow
-      FLOW[svc] = ["faucet_toilet_details", "faucet_toilet_details2", "faucet_toilet_details3"];
-    }
-  }
-}
-
-       
-      const flow = FLOW[svc] || [];
-      const nextSub = state.current.subIndex + 1;
-
-      console.log(`🧩 SERVICE '${svc}' | subIndex=${state.current.subIndex} | nextSub=${nextSub} | flow=`, flow);
-       
-      if (nextSub < flow.length) {
-        showOnly({ type:'service', id: svc, subIndex: nextSub });
-      } else {
-        console.log(`✅ Completed service: ${svc}`);
-        state.completedServices.add(svc);
-        const nxtSvc = firstUnfinishedService();
-        if (nxtSvc) gotoFirstSubOf(nxtSvc);
-        else { console.log("📸 All services done -> UPLOAD"); showOnly('upload'); }
-      }
-    }
-
-    logState("AFTER gotoNext");
-  }
-
-  function gotoBack() {
-    console.log("⬅️ gotoBack");
-
-    if (state.current === 'intro') return;
-    if (state.current === 'select') { showOnly('intro'); return; }
-
-    if (state.current === 'upload') {
-      const done = state.selectedOrder.filter(s => state.completedServices.has(s));
-      if (done.length) {
-        const lastSvc = done[done.length - 1];
-        const flow = FLOW[lastSvc] || [];
-        showOnly({ type:'service', id:lastSvc, subIndex: flow.length - 1 });
-      } else {
-        showOnly('select');
-      }
-      return;
-    }
-
-    if (state.current === 'success') { showOnly('upload'); return; }
-
-    if (typeof state.current === 'object' && state.current.type === 'service') {
-      const svc = state.current.id;
-      const idx = state.current.subIndex;
-      if (idx > 0) showOnly({ type:'service', id: svc, subIndex: idx - 1 });
-      else showOnly('select');
-    }
-
-    logState("AFTER gotoBack");
-  }
-
-  function renderProgress() {
-    const box = q('.progress', root);
-    if (!box) return;
-
-    const totalServiceSteps = state.selectedOrder.reduce((acc, svc) => acc + (FLOW[svc]?.length || 0), 0);
-    const doneServiceSteps  = Array.from(state.completedServices).reduce((acc, svc) => acc + (FLOW[svc]?.length || 0), 0);
-
-    const totalWithExtras = (totalServiceSteps || 0) + 2; // upload + success
-    let currentIndexStep = 0;
-
-    if (typeof state.current === 'object' && state.current.type === 'service') {
-      currentIndexStep = doneServiceSteps + state.current.subIndex + 1;
-    } else if (state.current === 'upload') {
-      currentIndexStep = doneServiceSteps + 1;
-    } else if (state.current === 'success') {
-      currentIndexStep = totalServiceSteps + 2;
-    }
-
-    box.textContent = `${Math.min(currentIndexStep, totalWithExtras)} of ${totalWithExtras} answered`;
-  }
-
-  // events
-  root.addEventListener('change', (e) => {
-    if (e.target.matches('input[name="services"][type="checkbox"]')) {
-      updateSelectedOrder();
-      if (typeof state.current === 'object' && state.current.type === 'service') {
-        if (!state.selectedOrder.includes(state.current.id)) {
-          state.completedServices.delete(state.current.id);
-          const nextSvc = firstUnfinishedService();
-          if (nextSvc) gotoFirstSubOf(nextSvc);
-          else showOnly('select');
-        }
-      }
-      renderProgress();
-    }
-  });
-
-  root.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-action]');
-    if (!btn) return;
-    if (btn.dataset.action === 'next') gotoNext();
-    if (btn.dataset.action === 'back') gotoBack();
-  });
-
-  // expose hooks for other flow scripts
-  window.__wiz = window.__wiz || {};
-  window.__wiz.FLOW = FLOW;
-  window.__wiz.state = state;
-  window.__wiz.gotoNext = gotoNext;
-  window.__wiz.showOnly = showOnly;
-  window.__wiz.firstUnfinishedService = firstUnfinishedService;
-  window.__wiz.gotoFirstSubOf = gotoFirstSubOf;
-
-  // init
-  updateSelectedOrder();
-  showOnly('intro');
-
-   console.log("✅✅ DEBUG LOADED v4");
-
-
-   // =========================
-// DEBUG (temporary)
-// =========================
-window.__DBG = window.__DBG || {
-  nextClicks: 0,
-  gotoNextCalls: 0
-};
-
-function dbgActiveStep() {
-  const s = document.querySelector('.step:not([hidden])');
-  if (!s) return { step: "none" };
-  return {
-    step: s.dataset.step,
-    service: s.dataset.service,
-    sub: s.dataset.sub
-  };
-}
-
-// Log EVERY click on NEXT in capture + bubble to detect duplicates
-document.addEventListener("click", (e) => {
-  const btn = e.target.closest('[data-action="next"]');
-  if (!btn) return;
-  window.__DBG.nextClicks += 1;
-  console.log("🟧 [DBG] NEXT click (CAPTURE/BUBBLE) count =", window.__DBG.nextClicks, "active=", dbgActiveStep());
-}, true);
-document.addEventListener("click", (e) => {
-  const btn = e.target.closest('[data-action="next"]');
-  if (!btn) return;
-  console.log("🟨 [DBG] NEXT click (BUBBLE) active=", dbgActiveStep());
-}, false);
-
-// Wrap gotoNext so we can count calls and see who is calling it
-const __origGotoNext = gotoNext;
-gotoNext = function() {
-  window.__DBG.gotoNextCalls += 1;
-  console.log("🟥 [DBG] gotoNext CALL #", window.__DBG.gotoNextCalls, "state.current=", state.current, "active=", dbgActiveStep());
-  return __origGotoNext.apply(this, arguments);
-};
-window.__wiz.gotoNext = gotoNext;
-
-
-  /* =========================
-     UPLOAD BIND
-  ========================= */
-  document.querySelectorAll(".upload-spot").forEach(spot => {
-    const img        = spot.querySelector(".upload-img");
-    const input      = spot.querySelector(".upload-input");
-    const serviceId  = spot.dataset.service || "final_upload";
-    const multiple   = spot.dataset.multiple === "false" ? false : true;
-    const maxMB      = parseInt(spot.dataset.maxMb || "40", 10);
-    const maxBytes   = maxMB * 1024 * 1024;
-
-    if (!input) return;
-
-    if (multiple) input.setAttribute("multiple",""); else input.removeAttribute("multiple");
-
-    img?.addEventListener("click", () => input.click());
-    spot.setAttribute("tabindex","0");
-    spot.setAttribute("role","button");
-    spot.addEventListener("keydown", e=>{
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); }
-    });
-
-    input.addEventListener("change", async () => {
-      const files = Array.from(input.files || []);
-      if (!files.length) return;
-
-      const bad = files.find(f => !f.type.startsWith("image/") || f.size > maxBytes);
-      if (bad) { alert(`"${bad.name}" is not an image or exceeds ${maxMB}MB.`); input.value = ""; return; }
-
-      spot.classList.add("uploading");
-
-      try {
-        const urls = [];
-        for (const f of files) {
-          const data = await uploadServicePhoto(f, serviceId, window.wizardState.sessionId);
-          urls.push(data.secure_url);
-        }
-        window.wizardState.uploadUrls[serviceId] =
-          (window.wizardState.uploadUrls[serviceId] || []).concat(urls);
-
-        spot.classList.remove("uploading");
-        spot.classList.add("uploaded");
-        try {
-          img.src = URL.createObjectURL(files[0]);
-        } catch {}
-      } catch (err) {
-        console.error(err);
-        spot.classList.remove("uploading");
-        spot.classList.add("error");
-        alert("Upload failed. Please try again.");
-      } finally {
-        input.value = "";
-      }
-    });
-  });
-
-  /* =========================
-     POPUP CATALOG OPEN/CLOSE + RADIO BORDER
-  ========================= */
-  document.addEventListener("click", (e) => {
-    const closer = e.target.closest(".close-modal");
-    if (closer) {
-      const catalog = closer.closest(".popup-catalog");
-      if (catalog) catalog.style.display = "none";
-      return;
-    }
-
-    const opener = e.target.closest(".open-popup");
-    if (opener) {
-      if (e.target.closest(".popup-catalog")) return;
-
-      const catalog = opener.querySelector(".popup-catalog");
-      if (catalog) {
-        catalog.style.display = "flex";
-
-        const popupRadios = catalog.querySelectorAll('input[type="radio"]');
-        popupRadios.forEach((radio) => {
-          const field = radio.closest('.radio-button-field');
-          const image = field ? field.querySelector('.image-radio') : null;
-          if (image) image.style.borderColor = radio.checked ? '#1E2A38' : '';
-        });
-      }
-      return;
-    }
-  });
-
-  document.addEventListener("change", (e) => {
-    if (e.target.matches('.popup-catalog input[type="radio"]')) {
-      const changedRadio = e.target;
-      const catalog = changedRadio.closest('.popup-catalog');
-      if (!catalog) return;
-
-      const groupName = changedRadio.name;
-      const groupRadios = catalog.querySelectorAll(`input[type="radio"][name="${groupName}"]`);
-
-      groupRadios.forEach((r) => {
-        const field = r.closest('.radio-button-field');
-        const image = field ? field.querySelector('.image-radio') : null;
-        if (image) image.style.borderColor = r.checked ? '#1E2A38' : '';
-      });
-    }
-  });
-
-  /* =========================
-     CLEANING dynamic show-if (by cleaning_services checkboxes)
-  ========================= */
-  document.querySelectorAll('input[name="cleaning_services"]').forEach(cb => {
-    cb.addEventListener('change', () => {
-      const checkedValues = Array.from(document.querySelectorAll('input[name="cleaning_services"]:checked'))
-        .map(i => i.value);
-
-      document.querySelectorAll('[data-show-if]').forEach(block => {
-        const triggerValue = block.dataset.showIf;
-        block.hidden = !checkedValues.includes(triggerValue);
-      });
-    });
-  });
-
-  /* =========================
-     SERVICE subsections show-if (deduped, was duplicated)
-  ========================= */
-  const serviceInputs = document.querySelectorAll('[data-service]');
-
-  function updateSubsections() {
-    const activeServices = Array.from(serviceInputs)
-      .filter(input => input.checked)
-      .map(input => input.dataset.service);
-
-    document.querySelectorAll('[data-show-if]').forEach(section => {
-      const target = section.dataset.showIf;
-      if (activeServices.includes(target)) {
-        section.style.display = 'flex';
-        section.classList.add('visible');
-      } else {
-        section.style.display = 'none';
-        section.classList.remove('visible');
-      }
-    });
-  }
-
-  serviceInputs.forEach(input => input.addEventListener('change', updateSubsections));
-  updateSubsections();
-
-  /* =========================
-     NEXT button validation (data-required)
-  ========================= */
-  function isVisible(el) {
-    if (!el) return false;
-    let node = el;
-    while (node && node !== document.body) {
-      if (node.hidden) return false;
-      const style = window.getComputedStyle(node);
-      if (style.display === "none" || style.visibility === "hidden") return false;
-      node = node.parentElement;
-    }
-    return true;
-  }
-
-  function getActiveStep() {
-    return document.querySelector(".step:not([hidden])");
-  }
-
-  function stepIsValid(step) {
-    if (!step) return true;
-
-    const requiredInputs = Array.from(step.querySelectorAll("[data-required]"));
-    if (!requiredInputs.length) return true;
-
-    let allOk = true;
-    const groups = {};
-
-    requiredInputs.forEach((input, idx) => {
-      const tag  = input.tagName;
-      const type = (input.type || "").toLowerCase();
-
-      if (type === "radio" || type === "checkbox") {
-        const name = input.name || ("__solo_" + idx);
-        if (!groups[name]) groups[name] = { someVisible: false, someChecked: false };
-
-        if (isVisible(input)) {
-          groups[name].someVisible = true;
-          if (input.checked) groups[name].someChecked = true;
-        }
-      } else {
-        if (!isVisible(input)) return;
-
-        const value = (input.value || "").trim();
-        if (tag === "SELECT") {
-          if (!value) allOk = false;
-        } else {
-          if (!value) allOk = false;
-        }
-      }
-    });
-
-    Object.values(groups).forEach(g => {
-      if (g.someVisible && !g.someChecked) allOk = false;
-    });
-
-    return allOk;
-  }
-
-  function updateNextButtonState() {
-    const step = getActiveStep();
-    if (!step) return;
-
-    const nextBtn = step.querySelector('[data-action="next"]');
-    if (!nextBtn) return;
-
-    const valid = stepIsValid(step);
-
-    if (valid) {
-      nextBtn.disabled = false;
-      nextBtn.style.opacity = "";
-      nextBtn.style.pointerEvents = "";
-      nextBtn.style.cursor = "";
-    } else {
-      nextBtn.disabled = true;
-      nextBtn.style.opacity = "0.7";
-      nextBtn.style.pointerEvents = "none";
-      nextBtn.style.cursor = "not-allowed";
-    }
-  }
-
-  document.addEventListener("click", (e) => {
-    const btn = e.target.closest('[data-action="next"]');
-    if (!btn) return;
-
-    const step = getActiveStep();
-    if (!step) return;
-
-    if (!stepIsValid(step)) {
-      e.preventDefault();
-      e.stopPropagation();
-      alert("Please fill in the required fields to continue.");
-    }
-  }, true);
-
-  document.addEventListener("change", updateNextButtonState);
-  document.addEventListener("input", updateNextButtonState);
-
-  const observer = new MutationObserver(() => updateNextButtonState());
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ["hidden", "style", "class"]
-  });
-
-  updateNextButtonState();
-
-  /* =========================
-     Question renumbering
-  ========================= */
-  const OFFSET = 4;
-
-  function getActiveServicesForRenumber() {
-    return Array.from(
-      root.querySelectorAll('input[name="services"][type="checkbox"][data-service]')
-    )
-      .filter(input => input.checked)
-      .map(input => input.dataset.service);
-  }
-
-  function renumberQuestions() {
-    const activeServices = getActiveServicesForRenumber();
-    let counter = OFFSET;
-
-    const allBadges = Array.from(root.querySelectorAll(".question-number-auto"));
-    const buckets = {};
-
-    allBadges.forEach((badge) => {
-      const step = badge.closest('.step[data-step="service"]');
-      if (!step) return;
-      const svc = step.dataset.service;
-      const sub = step.dataset.sub || "";
-      const key = svc + "::" + sub;
-      if (!buckets[key]) buckets[key] = [];
-      buckets[key].push(badge);
-    });
-
-    allBadges.forEach(badge => { badge.textContent = ""; });
-
-    activeServices.forEach((svcId) => {
-      const subs = FLOW[svcId] || [];
-      subs.forEach((subId) => {
-        const key = svcId + "::" + subId;
-        const list = buckets[key] || [];
-        list.forEach((badge) => {
-          counter += 1;
-          badge.textContent = counter;
-        });
-      });
-    });
-  }
-
-  renumberQuestions();
-
-  root.addEventListener("change", (e) => {
-    if (e.target.matches('input[name="services"][type="checkbox"][data-service]')) {
-      renumberQuestions();
-    }
-  });
-
-  document.addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-action]");
-    if (!btn) return;
-    setTimeout(() => renumberQuestions(), 0);
-  });
-
-  /* =========================
-     SHEET SUBMIT ALL
-  ========================= */
-  console.log("[Sheet] init");
-
+  // Keep sqft in wizardState if present
   const sqftInput =
     document.getElementById("home-sqft") ||
     document.getElementById("carpet-sqft") ||
@@ -1154,213 +481,54 @@ window.__wiz.gotoNext = gotoNext;
     sqftInput.addEventListener("input", syncSqft);
   }
 
+  /* =========================
+     SEND ALL TO SHEET (FINAL)
+  ========================= */
   const finalBtn = document.getElementById("sheet-submit-all");
   if (!finalBtn) {
     console.warn("[Sheet] #sheet-submit-all not found");
-  } else {
-    let alreadySending = false;
-
-    finalBtn.addEventListener("click", () => {
-      if (alreadySending) return;
-
-      const lines = collectAllLineItems();
-      if (!lines.length) {
-        console.warn("[Sheet] No line items to send.");
-        return;
-      }
-
-      alreadySending = true;
-
-      (async () => {
-        const clientName = window.wizardState?.clientName || "Test User";
-
-        for (const line of lines) {
-          try {
-            await sendLineToSheet({ ...line, clientName });
-          } catch (err) {
-            console.error("[Sheet] Failed line:", line, err);
-          }
-        }
-
-        console.log("[Sheet] All sent.");
-        alreadySending = false;
-      })();
-    });
+    return;
   }
 
-  /* =========================
-     FLOW SKIPS (Light, Exterior, Cabinet)
-  ========================= */
+  let alreadySending = false;
 
-  // LIGHT skip
-  (function initLightSkip() {
-    const api = window.__wiz;
-    if (!api?.FLOW || !api?.state || !api?.gotoNext || !api?.showOnly) return;
+  finalBtn.addEventListener("click", async () => {
+    if (alreadySending) return;
 
-    const LIGHT_SERVICE = "light";
-    const SUB_QUESTIONS = "light_questions";
-    const SUB_TYPE = "light_type";
+    syncClientNameToState();
 
-    function getAnswer() {
-      const r = document.querySelector('input[name="light_new_fans"]:checked');
-      return (r?.value || "").trim().toLowerCase();
+    const lines = collectAllLineItems();
+    if (!lines.length) {
+      alert("Nothing to submit.");
+      return;
     }
 
-    function shouldIncludeLightType() {
-      return getAnswer() === "yes";
-    }
+    const clientName = (window.wizardState?.clientName || "").trim() || "Test User";
 
-    function applyFlowRealtime() {
-      const include = shouldIncludeLightType();
+    alreadySending = true;
+    const oldText = finalBtn.textContent;
+    finalBtn.disabled = true;
+    finalBtn.textContent = "Sending...";
 
-      api.FLOW[LIGHT_SERVICE] = include ? [SUB_QUESTIONS, SUB_TYPE] : [SUB_QUESTIONS];
-      console.log("[LightSkip] FLOW.light =", api.FLOW[LIGHT_SERVICE]);
-
-      const cur = api.state.current;
-      if (!include && typeof cur === "object" && cur.type === "service" && cur.id === LIGHT_SERVICE) {
-        if (cur.subIndex >= 1) {
-          api.state.completedServices?.add?.(LIGHT_SERVICE);
-          const nextSvc = api.firstUnfinishedService?.() || null;
-          if (nextSvc && api.gotoFirstSubOf) api.gotoFirstSubOf(nextSvc);
-          else api.showOnly("upload");
-        }
+    try {
+      for (const line of lines) {
+        const ok = await sendLineToSheet({ ...line, clientName });
+        if (!ok) console.warn("[Sheet] One line failed:", line);
       }
+
+      console.log("[Sheet] All sent OK", { sessionId: window.wizardState.sessionId });
+      alert("✅ Sent!");
+
+      // If you want each submit to create a new Order sheet, uncomment:
+      // window.wizardState.sessionId = crypto?.randomUUID?.() || String(Date.now());
+
+    } catch (err) {
+      console.error("❌ Submit failed:", err);
+      alert("Submit failed. Check console.");
+    } finally {
+      alreadySending = false;
+      finalBtn.disabled = false;
+      finalBtn.textContent = oldText || "Submit";
     }
-
-    document.addEventListener("change", (e) => {
-      if (e.target.matches('input[name="light_new_fans"]')) applyFlowRealtime();
-    });
-
-    document.addEventListener("click", (e) => {
-      const btn = e.target.closest('[data-action="next"]');
-      if (!btn) return;
-
-      const activeLightQuestions = document.querySelector(
-        `.step[data-step="service"][data-service="${LIGHT_SERVICE}"][data-sub="${SUB_QUESTIONS}"]:not([hidden])`
-      );
-      if (!activeLightQuestions) return;
-
-      applyFlowRealtime();
-
-      if (!shouldIncludeLightType()) {
-        e.preventDefault();
-        e.stopPropagation();
-        setTimeout(() => api.gotoNext(), 0);
-      }
-    }, true);
-
-    applyFlowRealtime();
-  })();
-
-
-
-
-   
-  // Exterior flow
-  (function initExteriorFlow() {
-    const api = window.__wiz;
-    if (!api?.FLOW || !api?.state || !api?.showOnly) return;
-
-    const EXTERIOR_YESNO_GROUP = "home_exterior";
-    const SERVICE = "exterior_paint";
-    const SUB1 = "ext_paint";
-    const SUB2 = "ext_paint2";
-
-    function getRadioVal(groupName) {
-      const r = document.querySelector(`input[name="${groupName}"]:checked`);
-      return (r?.value || "").trim().toLowerCase();
-    }
-
-    function includeExteriorStep2() {
-      return getRadioVal(EXTERIOR_YESNO_GROUP) === "yes";
-    }
-
-    function applyExteriorFlow() {
-      const include2 = includeExteriorStep2();
-      api.FLOW[SERVICE] = include2 ? [SUB1, SUB2] : [SUB1];
-      console.log("[ExteriorFlow] FLOW.exterior_paint =", api.FLOW[SERVICE]);
-
-      const cur = api.state.current;
-      if (!include2 && typeof cur === "object" && cur.type === "service" && cur.id === SERVICE) {
-        if (cur.subIndex >= 1) {
-          api.state.completedServices?.add?.(SERVICE);
-          const nextSvc = api.firstUnfinishedService?.() || null;
-          if (nextSvc && api.gotoFirstSubOf) api.gotoFirstSubOf(nextSvc);
-          else api.showOnly("upload");
-        }
-      }
-    }
-
-    document.addEventListener("change", (e) => {
-      if (e.target.matches(`input[name="${EXTERIOR_YESNO_GROUP}"]`)) applyExteriorFlow();
-    });
-
-    applyExteriorFlow();
-  })();
-
-  // Cabinet flow
-  (function initCabinetFlow() {
-    const api = window.__wiz;
-    if (!api?.FLOW || !api?.state || !api?.showOnly) return;
-
-    const CABINET_REPLACE_GROUP = "cabinet_replace";
-    const SERVICE = "cabinet_hardware";
-    const SUB1 = "replace_question";
-    const SUB2 = "counts";
-    const SUB3 = "finish";
-
-    function getVal() {
-      const r = document.querySelector(`input[name="${CABINET_REPLACE_GROUP}"]:checked`);
-      return (r?.value || "").trim().toLowerCase();
-    }
-
-    function includeCountsAndFinish() {
-      return getVal() === "yes";
-    }
-
-    function applyCabinetFlow() {
-      const include = includeCountsAndFinish();
-      api.FLOW[SERVICE] = include ? [SUB1, SUB2, SUB3] : [SUB1];
-      console.log("[CabinetFlow] FLOW.cabinet_hardware =", api.FLOW[SERVICE]);
-
-      const cur = api.state.current;
-      if (!include && typeof cur === "object" && cur.type === "service" && cur.id === SERVICE) {
-        if (cur.subIndex >= 1) {
-          api.state.completedServices?.add?.(SERVICE);
-          const nextSvc = api.firstUnfinishedService?.() || null;
-          if (nextSvc && api.gotoFirstSubOf) api.gotoFirstSubOf(nextSvc);
-          else api.showOnly("upload");
-        }
-      }
-    }
-
-    document.addEventListener("change", (e) => {
-      if (e.target.matches(`input[name="${CABINET_REPLACE_GROUP}"]`)) applyCabinetFlow();
-    });
-
-    applyCabinetFlow();
-  })();
-
-  /* =========================
-     Misc: yes-radio hide blocks
-  ========================= */
-  (function initYesRadioHide() {
-    const yesRadio = document.querySelector(".yes-radio-btn");
-    const targets  = document.querySelectorAll(".hide-if-yes");
-    if (!yesRadio) return;
-
-    function updateVisibility() {
-      const isChecked = yesRadio.checked === true;
-      targets.forEach(el => { el.style.display = isChecked ? "flex" : "none"; });
-    }
-
-    document.addEventListener("change", (e) => {
-      if (e.target.type === "radio") updateVisibility();
-    });
-
-    updateVisibility();
-  })();
-
-
-
+  });
 });
