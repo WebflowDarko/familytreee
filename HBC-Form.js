@@ -785,7 +785,7 @@ if (svc === "faucet_toilet") {
 
 
 /* =========================
-   QTY CONTROLS (checkbox +/−)
+   QTY CONTROLS (+ / -) for IMG buttons
 ========================= */
 (function initQtyControls() {
   const MIN_QTY = 1;
@@ -797,48 +797,24 @@ if (svc === "faucet_toilet") {
     return Math.max(MIN_QTY, Math.min(MAX_QTY, n));
   }
 
-  function findCheckboxByItemId(itemId) {
-    return document.querySelector(`.fixture-checkbox[data-item-id="${CSS.escape(itemId)}"]`);
+  function findCheckboxForQtyBox(qtyBox, itemId) {
+    // probaj da nađeš checkbox u okviru iste kartice (najsigurnije)
+    const card = qtyBox.closest(
+      "[data-item-card], .radio-button-field, .with_plus_qnty, label, .popup-grid-radio-btns"
+    );
+
+    const local = card?.querySelector(
+      `.fixture-checkbox[data-item-id="${CSS.escape(itemId)}"]`
+    );
+    if (local) return local;
+
+    // fallback global
+    return document.querySelector(
+      `.fixture-checkbox[data-item-id="${CSS.escape(itemId)}"]`
+    );
   }
 
-  function setQty(checkbox, qty) {
-    qty = clamp(qty);
-    checkbox.dataset.qty = String(qty);
-
-    const itemId = checkbox.dataset.itemId;
-    const qtyBox = document.querySelector(`[data-qty-for="${CSS.escape(itemId)}"]`);
-    if (qtyBox) {
-      const num = qtyBox.querySelector("[data-qty-value]");
-      if (num) num.textContent = String(qty);
-    }
-  }
-
-  function toggleQtyUI(checkbox) {
-    const itemId = checkbox.dataset.itemId;
-    const qtyBox = document.querySelector(`[data-qty-for="${CSS.escape(itemId)}"]`);
-    if (!qtyBox) return;
-
-    if (checkbox.checked) {
-      qtyBox.hidden = false;
-      // ako nema qty, postavi 1
-      if (!checkbox.dataset.qty) checkbox.dataset.qty = "1";
-      setQty(checkbox, checkbox.dataset.qty);
-    } else {
-      qtyBox.hidden = true;
-      // opcionalno: reset na 1 kad se odčekira
-      checkbox.dataset.qty = "1";
-      setQty(checkbox, 1);
-    }
-  }
-
-  // 1) Kad se čekira/odčekira checkbox, pokaži/sakrij qty UI
-  document.addEventListener("change", (e) => {
-    const cb = e.target.closest(".fixture-checkbox");
-    if (!cb) return;
-    toggleQtyUI(cb);
-  });
-
-  // 2) Klik na +/− menja qty (radi i dok je checkbox čekiran)
+  // Klik na +/− (radi i za IMG elemente)
   document.addEventListener("click", (e) => {
     const btn = e.target.closest("[data-qty-action]");
     if (!btn) return;
@@ -847,25 +823,36 @@ if (svc === "faucet_toilet") {
     if (!qtyBox) return;
 
     const itemId = qtyBox.getAttribute("data-qty-for");
-    const cb = findCheckboxByItemId(itemId);
-    if (!cb) return;
 
-    // Ako klikne +/−, a nije čekirano, čekiraj automatski
+    // broj u UI (mora biti unutar qtyBox)
+    const numEl = qtyBox.querySelector("[data-qty-value]");
+    if (!numEl) {
+      console.warn("[QTY] Missing [data-qty-value] inside qtyBox for itemId:", itemId);
+      return;
+    }
+
+    // checkbox koji drži qty (data-qty)
+    const cb = findCheckboxForQtyBox(qtyBox, itemId);
+    if (!cb) {
+      console.warn(
+        "[QTY] Checkbox not found for itemId:",
+        itemId,
+        "Dodaj class fixture-checkbox + data-item-id na checkbox (isti kao data-qty-for)."
+      );
+      return;
+    }
+
+    // ako klikne +/− a nije čekiran -> čekiraj ga
     if (!cb.checked) {
       cb.checked = true;
       cb.dispatchEvent(new Event("change", { bubbles: true }));
     }
 
-    const cur = clamp(cb.dataset.qty || 1);
+    const cur = clamp(cb.dataset.qty || numEl.textContent || 1);
     const action = btn.getAttribute("data-qty-action");
     const next = action === "inc" ? cur + 1 : cur - 1;
+    co
 
-    setQty(cb, next);
-  });
-
-  // 3) Init: ako ima već čekiranih (npr. back/restore), namesti UI
-  document.querySelectorAll(".fixture-checkbox").forEach(cb => toggleQtyUI(cb));
-})();
 
    
 
