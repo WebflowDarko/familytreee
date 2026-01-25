@@ -784,6 +784,91 @@ if (svc === "faucet_toilet") {
    console.log("✅✅ DEBUG LOADED v4");
 
 
+/* =========================
+   QTY CONTROLS (checkbox +/−)
+========================= */
+(function initQtyControls() {
+  const MIN_QTY = 1;
+  const MAX_QTY = 99;
+
+  function clamp(n) {
+    n = Number(n);
+    if (isNaN(n)) n = MIN_QTY;
+    return Math.max(MIN_QTY, Math.min(MAX_QTY, n));
+  }
+
+  function findCheckboxByItemId(itemId) {
+    return document.querySelector(`.fixture-checkbox[data-item-id="${CSS.escape(itemId)}"]`);
+  }
+
+  function setQty(checkbox, qty) {
+    qty = clamp(qty);
+    checkbox.dataset.qty = String(qty);
+
+    const itemId = checkbox.dataset.itemId;
+    const qtyBox = document.querySelector(`[data-qty-for="${CSS.escape(itemId)}"]`);
+    if (qtyBox) {
+      const num = qtyBox.querySelector("[data-qty-value]");
+      if (num) num.textContent = String(qty);
+    }
+  }
+
+  function toggleQtyUI(checkbox) {
+    const itemId = checkbox.dataset.itemId;
+    const qtyBox = document.querySelector(`[data-qty-for="${CSS.escape(itemId)}"]`);
+    if (!qtyBox) return;
+
+    if (checkbox.checked) {
+      qtyBox.hidden = false;
+      // ako nema qty, postavi 1
+      if (!checkbox.dataset.qty) checkbox.dataset.qty = "1";
+      setQty(checkbox, checkbox.dataset.qty);
+    } else {
+      qtyBox.hidden = true;
+      // opcionalno: reset na 1 kad se odčekira
+      checkbox.dataset.qty = "1";
+      setQty(checkbox, 1);
+    }
+  }
+
+  // 1) Kad se čekira/odčekira checkbox, pokaži/sakrij qty UI
+  document.addEventListener("change", (e) => {
+    const cb = e.target.closest(".fixture-checkbox");
+    if (!cb) return;
+    toggleQtyUI(cb);
+  });
+
+  // 2) Klik na +/− menja qty (radi i dok je checkbox čekiran)
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-qty-action]");
+    if (!btn) return;
+
+    const qtyBox = btn.closest("[data-qty-for]");
+    if (!qtyBox) return;
+
+    const itemId = qtyBox.getAttribute("data-qty-for");
+    const cb = findCheckboxByItemId(itemId);
+    if (!cb) return;
+
+    // Ako klikne +/−, a nije čekirano, čekiraj automatski
+    if (!cb.checked) {
+      cb.checked = true;
+      cb.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    const cur = clamp(cb.dataset.qty || 1);
+    const action = btn.getAttribute("data-qty-action");
+    const next = action === "inc" ? cur + 1 : cur - 1;
+
+    setQty(cb, next);
+  });
+
+  // 3) Init: ako ima već čekiranih (npr. back/restore), namesti UI
+  document.querySelectorAll(".fixture-checkbox").forEach(cb => toggleQtyUI(cb));
+})();
+
+   
+
    // =========================
 // DEBUG (temporary)
 // =========================
