@@ -878,6 +878,35 @@ if (svc === "faucet_toilet") {
 
 })();
 
+/* =========================
+   SHOW / HIDE QTY ON CHECKBOX
+========================= */
+document.addEventListener("change", (e) => {
+  const cb = e.target.closest(".fixture-checkbox");
+  if (!cb) return;
+
+  const itemId = cb.dataset.itemId;
+  if (!itemId) return;
+
+  const qtyBox = document.querySelector(`[data-qty-for="${itemId}"]`);
+  if (!qtyBox) return;
+
+  const num = qtyBox.querySelector("[data-qty-value]");
+
+  if (cb.checked) {
+    // show
+    qtyBox.classList.add("is-visible");
+
+    // init to 1 if empty
+    if (!cb.dataset.qty) cb.dataset.qty = "1";
+    if (num) num.textContent = cb.dataset.qty;
+  } else {
+    // hide + reset
+    qtyBox.classList.remove("is-visible");
+    cb.dataset.qty = "1";
+    if (num) num.textContent = "1";
+  }
+});
 
 
    
