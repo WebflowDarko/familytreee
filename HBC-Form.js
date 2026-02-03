@@ -495,13 +495,15 @@ if (vanityPick) {
 /* =========================
    MAIN INIT (ONE DOMContentLoaded)
 ========================= */
-document.addEventListener("DOMContentLoaded", () => {
-
-  /* =========================
-     WIZARD CORE
-  ========================= */
+window.Webflow = window.Webflow || [];
+window.Webflow.push(function () {
   const root = document.querySelector('#wizard');
   if (!root) return;
+
+  // spreči dupli init
+  if (root.dataset.hbcInit === "1") return;
+  root.dataset.hbcInit = "1";
+
 
   // FLOW definition (shared)
   const FLOW = {
