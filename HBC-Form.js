@@ -1,3 +1,7 @@
+console.log("HBC-Form.js LOADED");
+
+
+
 /* =========================
    CLOUDINARY CONFIG
 ========================= */
