@@ -504,6 +504,9 @@ window.Webflow.push(function () {
   if (root.dataset.hbcInit === "1") return;
   root.dataset.hbcInit = "1";
 
+   console.log("✅ HBC INIT RUNNING (Webflow.push)");
+
+
 
   // FLOW definition (shared)
   const FLOW = {
