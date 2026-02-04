@@ -495,15 +495,14 @@ if (vanityPick) {
 /* =========================
    MAIN INIT (ONE DOMContentLoaded)
 ========================= */
-window.Webflow = window.Webflow || [];
-window.Webflow.push(function () {
+document.addEventListener("DOMContentLoaded", () => {
+
+  /* =========================
+     WIZARD CORE
+  ========================= */
   const root = document.querySelector('#wizard');
   if (!root) return;
-
-  // spreči dupli init
-  if (root.dataset.hbcInit === "1") return;
-  root.dataset.hbcInit = "1";
-
+   
    console.log("✅ HBC INIT RUNNING (Webflow.push)");
 
 
