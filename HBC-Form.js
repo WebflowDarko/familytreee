@@ -12,7 +12,7 @@ const ROOT_FOLDER   = "wizard_uploads";
 /* =========================
    SHEETS ENDPOINT
 ========================= */
-const SHEET_ENDPOINT = "https://script.google.com/macros/s/AKfycbzoQ4knvVo9ta5CzODBy9azglFmwUiaH1PrIuCHsQP6Qf3cG--QcL_iMLVpRtdlqzFA/exec";
+const SHEET_ENDPOINT = "https://script.google.com/macros/s/AKfycbxlVM09LwY14ultwpHrZQLut4IYr4HW9I0FdqPAYW_UeF_oAspmexRWY0gVnp_QwoS4/exec";
 
 /* =========================
    GLOBAL STATE
@@ -50,12 +50,36 @@ async function uploadServicePhoto(file, serviceId, sessionId) {
 /* =========================
    SHEET HELPERS
 ========================= */
+
+function getClientIdentity() {
+  let firstName = "";
+  let lastName  = "";
+  let email     = "";
+
+  try {
+    const raw = localStorage.getItem("hs_form_user");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      firstName = (parsed.firstName || "").trim();
+      lastName  = (parsed.lastName || "").trim();
+      email     = (parsed.email || "").trim();
+    }
+  } catch (err) {
+    console.warn("[ClientIdentity] Failed to parse hs_form_user", err);
+  }
+
+  const clientName = [firstName, lastName].filter(Boolean).join(" ") || "Test User";
+
+  return { clientName, clientEmail: email };
+}
+
+
+
 async function sendLineToSheet(opts) {
   const {
     serviceName = "",
     itemId,
     qty = 1,
-    clientName = "Test User",
     description = ""
   } = opts || {};
 
@@ -64,8 +88,11 @@ async function sendLineToSheet(opts) {
     return;
   }
 
+  const { clientName, clientEmail } = getClientIdentity();
+
   const params = new URLSearchParams();
   params.append("clientName", clientName);
+  params.append("clientEmail", clientEmail);
   params.append("sessionId", window.wizardState?.sessionId || "wizard-session");
   params.append("serviceName", serviceName);
   params.append("carpetItemId", itemId);
@@ -82,6 +109,37 @@ async function sendLineToSheet(opts) {
 
   return res.ok;
 }
+
+
+async function sendSubmissionToSheet(lines) {
+  const { clientName, clientEmail } = getClientIdentity();
+
+  const payload = {
+    action: "submit_all",
+    clientName,
+    clientEmail,
+    sessionId: window.wizardState?.sessionId || "wizard-session",
+    lines: (lines || []).map(l => ({
+      serviceName: l.serviceName || "",
+      itemId: l.itemId || "",
+      qty: Number(l.qty || 0),
+      description: l.description || ""
+    }))
+  };
+
+  const res = await fetch(SHEET_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  const text = await res.text().catch(() => "");
+  console.log("[Sheet] submit_all response", { status: res.status, body: text });
+
+  return res.ok;
+}
+
+
 
 function buildSubDescriptionForParent(parentItemId) {
   const subs = document.querySelectorAll(
@@ -1353,19 +1411,16 @@ window.__wiz.gotoNext = gotoNext;
       alreadySending = true;
 
       (async () => {
-        const clientName = window.wizardState?.clientName || "Test User";
+  try {
+    await sendSubmissionToSheet(lines);
+    console.log("[Sheet] Submission sent.");
+  } catch (err) {
+    console.error("[Sheet] submit_all failed:", err);
+  } finally {
+    alreadySending = false;
+  }
+})();
 
-        for (const line of lines) {
-          try {
-            await sendLineToSheet({ ...line, clientName });
-          } catch (err) {
-            console.error("[Sheet] Failed line:", line, err);
-          }
-        }
-
-        console.log("[Sheet] All sent.");
-        alreadySending = false;
-      })();
     });
   }
 
