@@ -354,6 +354,23 @@ if (vanityPick) {
         qty: qtyWithLock
       });
     }
+     // Dummy door knobs (non-turning)
+const dummyQtyEl =
+  document.getElementById("dummy-door-qty") ||
+  document.querySelector('input[data-qty="dummy"]');
+
+const dummyQty = dummyQtyEl ? Number((dummyQtyEl.value || "").trim()) : 0;
+
+const itemDummy = (doorFinish.dataset.itemDummy || "").trim();
+
+if (itemDummy && !isNaN(dummyQty) && dummyQty > 0) {
+  items.push({
+    serviceName: "Door Hardware - Dummy Knob",
+    itemId: itemDummy,
+    qty: dummyQty
+  });
+}
+
   }
 
 
