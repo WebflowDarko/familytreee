@@ -371,6 +371,35 @@ if (itemDummy && !isNaN(dummyQty) && dummyQty > 0) {
   });
 }
 
+
+     // Front door yes/no
+  const frontAns = document.querySelector(
+    'input[name="front_door_hardware_replace"]:checked'
+  );
+  const frontYes = (frontAns?.value || "").trim().toLowerCase() === "yes";
+
+  const itemFront = (doorFinish.dataset.itemFrontExterior || "").trim();
+  if (frontYes && itemFront) {
+    items.push({
+      serviceName: "Front Door Hardware",
+      itemId: itemFront,
+      qty: 1
+    });
+  }
+
+  // Other exterior doors qty
+  const otherQtyEl = document.getElementById("exterior-doors-qty");
+  const otherQty = otherQtyEl ? Number((otherQtyEl.value || "").trim()) : 0;
+
+  const itemOther = (doorFinish.dataset.itemExteriorOther || "").trim();
+  if (itemOther && otherQty > 0) {
+    items.push({
+      serviceName: "Exterior Door Hardware (Other Doors)",
+      itemId: itemOther,
+      qty: otherQty
+    });
+  }
+
   }
 
 
@@ -531,7 +560,7 @@ document.addEventListener("DOMContentLoaded", () => {
     inside_paint:   ['paint_details', 'light_questions2', 'color_scheme'],
     exterior_paint: ['ext_paint', 'ext_paint2'],
     cabinet_hardware: ['replace_question', 'counts', 'finish'],
-    door_hardware: ['door_details','door_style'],
+    door_hardware: ['door_details','door_details_ext','door_style'],
     cleaning: ['cleaning_details'],
     landscaping: ['landscaping_details'],
     handyman: ['handyman_details'],
