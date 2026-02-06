@@ -75,40 +75,7 @@ function getClientIdentity() {
 
 
 
-async function sendLineToSheet(opts) {
-  const {
-    serviceName = "",
-    itemId,
-    qty = 1,
-    description = ""
-  } = opts || {};
 
-  if (!itemId) {
-    console.warn("[Sheet] Missing itemId, skip.");
-    return;
-  }
-
-  const { clientName, clientEmail } = getClientIdentity();
-
-  const params = new URLSearchParams();
-  params.append("clientName", clientName);
-  params.append("clientEmail", clientEmail);
-  params.append("sessionId", window.wizardState?.sessionId || "wizard-session");
-  params.append("serviceName", serviceName);
-  params.append("carpetItemId", itemId);
-  params.append("carpetQty", String(qty));
-  params.append("description", description);
-
-  const res = await fetch(SHEET_ENDPOINT, {
-    method: "POST",
-    body: params
-  });
-
-  const text = await res.text();
-  console.log("[Sheet] Response", { status: res.status, body: text });
-
-  return res.ok;
-}
 
 
 async function sendSubmissionToSheet(lines) {
