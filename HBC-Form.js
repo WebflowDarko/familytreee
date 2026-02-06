@@ -114,23 +114,25 @@ async function sendLineToSheet(opts) {
 async function sendSubmissionToSheet(lines) {
   const { clientName, clientEmail } = getClientIdentity();
 
-  const payload = {
-    action: "submit_all",
-    clientName,
-    clientEmail,
-    sessionId: window.wizardState?.sessionId || "wizard-session",
-    lines: (lines || []).map(l => ({
+  const params = new URLSearchParams();
+  params.append("action", "submit_all");
+  params.append("clientName", clientName);
+  params.append("clientEmail", clientEmail);
+  params.append("sessionId", window.wizardState?.sessionId || "wizard-session");
+
+  // 👇 šaljemo linije kao JSON string u jednom parametru
+  params.append("lines", JSON.stringify(
+    (lines || []).map(l => ({
       serviceName: l.serviceName || "",
       itemId: l.itemId || "",
       qty: Number(l.qty || 0),
       description: l.description || ""
     }))
-  };
+  ));
 
   const res = await fetch(SHEET_ENDPOINT, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
+    body: params
   });
 
   const text = await res.text().catch(() => "");
@@ -138,6 +140,7 @@ async function sendSubmissionToSheet(lines) {
 
   return res.ok;
 }
+
 
 
 
