@@ -566,6 +566,67 @@ if (itemDummy && !isNaN(dummyQty) && dummyQty > 0) {
   return items;
 }
 
+
+window.renderSummary = function renderSummary() {
+  const holder = document.getElementById("summaryList");
+  if (!holder) {
+    console.warn("[Summary] Missing #summaryList element on the page.");
+    return;
+  }
+
+  const lines = collectAllLineItems();
+  if (!lines || !lines.length) {
+    holder.innerHTML = `<div style="padding:12px;border:1px solid #eee;border-radius:8px;">
+      Nothing selected yet.
+    </div>`;
+    return;
+  }
+
+  // grupiši po serviceName
+  const groups = {};
+  lines.forEach(l => {
+    const key = (l.serviceName || "Other").trim();
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(l);
+  });
+
+  // render
+  let html = "";
+  Object.keys(groups).forEach(service => {
+    html += `<div style="margin-bottom:16px;">
+      <div style="font-weight:700;margin-bottom:8px;">${escapeHtml(service)}</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">`;
+
+    groups[service].forEach(item => {
+      const id  = escapeHtml(item.itemId || "");
+      const qty = escapeHtml(String(item.qty ?? ""));
+      const desc = escapeHtml((item.description || "").trim());
+
+      html += `<div style="padding:10px 12px;border:1px solid #eee;border-radius:10px;">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <div><b>Item:</b> ${id}</div>
+          <div><b>Qty:</b> ${qty}</div>
+        </div>
+        ${desc ? `<div style="margin-top:6px;opacity:0.9;"><b>Notes:</b> ${desc}</div>` : ""}
+      </div>`;
+    });
+
+    html += `</div></div>`;
+  });
+
+  holder.innerHTML = html;
+};
+
+function escapeHtml(s) {
+  return String(s ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+
 /* =========================
    MAIN INIT (ONE DOMContentLoaded)
 ========================= */
@@ -639,10 +700,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
       div.hidden = !match;
 
-      if (target === "summary" && window.renderSummary) {
-  setTimeout(window.renderSummary, 0);
-}
-
        
       if (match) console.log(`✅ Showing step [${kind}]`, div.dataset);
     });
@@ -654,6 +711,12 @@ document.addEventListener("DOMContentLoaded", () => {
     renderProgress();
     window.scrollTo({ top: 0, behavior: 'smooth' });
     logState("AFTER showOnly");
+
+     // ✅ When summary step is shown, render it
+if ((mode === "summary" || target === "summary") && typeof window.renderSummary === "function") {
+  setTimeout(window.renderSummary, 0);
+}
+
   }
 
   function getSelected() {
@@ -727,8 +790,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (state.current === 'upload') {
-      gotoSuccess(); return;
-    }
+  showOnly('summary');
+  return;
+}
+
+if (state.current === 'summary') {
+  gotoSuccess();
+  return;
+}
 
     if (state.current === 'success') return;
 
