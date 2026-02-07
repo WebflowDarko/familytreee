@@ -566,6 +566,107 @@ if (itemDummy && !isNaN(dummyQty) && dummyQty > 0) {
   return items;
 }
 
+const ITEM_TITLES = {
+  "105-1": "Mid- Grade Level 2  -349 Oak Bay",
+  "105-2": "Mid- Grade Level 2  - 812 Clam Shell",
+  "105-3": "High- Grade Level 1 - 944 Snowbird",
+  "105-4": "High- Grade Level 1 - 813 Morning Dove",
+  "105-5": "High- Grade Level 1 - 701 Sawgrass",
+
+  "110-1": "Interior Walls and Ceiling",
+  "110-2": "Interior Doors and Trim",
+  "110-3": "Paint Cabinets",
+  "110-4": "Full Exterior Paint (Single Story)",
+  "110-5": "Full Exterior Paint (Two Story)",
+  "110-6": "Exterior Trim and Doors",
+  "110-7": "Paint High Ceilings",
+  "110-8": "Scrape Popcorn Ceilings",
+  "110-9": "Remove Wall Paper (by room)",
+  "110-10": "Drywall Repairs",
+
+  "115-1": "A Fresh Cut - Mow and Edge Grass",
+  "115-2": "Tree Trimming",
+  "115-3": "Bush Trimming",
+  "115-4": "Flower Bed cleanout + black mulch",
+  "115-5": "Pressure Washing",
+
+  "120-1": "Standard Cleaning",
+  "120-2": "Deep Cleaning",
+  "120-3": "Exterior Window Cleaning",
+  "120-4": "Steam Clean Carpets and Rugs",
+  "120-5": "Exterior Pressure Washing",
+  "120-6": "Reglaze - Tub/shower Tile",
+
+  "125-1": "HVAC Filters",
+  "125-2": "Replace Door Weather Stripping",
+  "125-3": "Caulking and Sealing",
+  "125-4": "Replace House Numbers",
+  "125-5": "New Smoke/Carbon Monoxide Detectors",
+  "125-6": "Replace Ceiling Vent Covers",
+  "125-7": "Handy-Man - Other",
+
+  "130-1": "Toilet Replacement",
+  "130-2": "Kitchen Sink Fixture Replacement - Black",
+  "130-3": "Kitchen Sink Fixture Replacement - Silver",
+  "130-4": "Kitchen Sink Fixture Replacement - Brushed Gold",
+  "130-5": "Bathroom Vanity Sink Faucent Replacement - Black",
+  "130-6": "Bathroom Vanity Sink Faucent Replacement - Silver",
+  "130-7": "Bathroom Vanity Sink Faucent Replacement - Brushed Gold",
+
+  "135-1": "Cabinet Knobs (single hole) - Black",
+  "135-2": "Cabinet Knobs (single hole) - Silver",
+  "135-3": "Cabinet Knobs (single hole) - Brushed Gold",
+  "135-4": "Cabinet Pulls (two hole) - Black",
+  "135-5": "Cabinet Pulls (two hole) - Silver",
+  "135-6": "Cabinet Pulls (two hole) - Brushed Gold",
+  "135-7": "Cabinet Knobs",
+  "135-8": "Cabinet Pulls",
+
+  "140-1": "Door knob (pass-through) - Black",
+  "140-2": "Door knob (privacy- with a lock) - Black",
+  "140-3": "Door Knob (dummy - doesn't turn) - Black",
+  "140-4": "Door knob (pass-through) - Silver",
+  "140-5": "Door knob (privacy- with a lock) - Silver",
+  "140-6": "Door Knob (dummy - doesn't turn) - Silver",
+  "140-7": "Door Knobs",
+  "140-8": "Front Door Hardware - Handle and Deadbolt - Black",
+  "140-9": "Front Door Hardware - Handle and Deadbolt - Silver",
+  "140-10": "Exterior Door Hardware - Door Knob & Deadbolt - Black",
+  "140-11": "Exterior Door Hardware - Door Knob & Deadbolt - Silver",
+
+  "145-1": "Black - Ceiling Fan",
+  "145-2": "Black - Vanity Light - Small (3 light)",
+  "145-3": "Black - Vanity Light - Large (5 lights)",
+  "145-4": "Black Diningroom Chandelier",
+  "145-5": "Black Breakfast Nook Chandelier",
+  "145-6": "Black Entry Light Chandelier",
+  "145-7": "Black Entry Light Flushmount",
+  "145-8": "Black Island Pendant Light",
+
+  "145-9": "Silver - Ceiling Fan",
+  "145-10": "Silver - Vanity Light - Small (3 light)",
+  "145-11": "Silver  - Vanity Light - Large (5 lights)",
+  "145-12": "Silver - Diningroom Chandelier",
+  "145-13": "Silver - Breakfast Nook Chandelier",
+  "145-14": "Silver - Entry Light Chandelier",
+  "145-15": "Silver - Entry Light Flushmount",
+  "145-16": "Silver - Island Pendant Light",
+
+  "145-17": "Gold - Ceiling Fan",
+  "145-18": "Gold - Vanity Light - Small (3 light)",
+  "145-19": "Gold - Vanity Light - Large (5 lights)",
+  "145-20": "Gold - Diningroom Chandelier",
+  "145-21": "Gold - Breakfast Nook Chandelier",
+  "145-22": "Gold - Entry Light Chandelier",
+  "145-23": "Gold - Entry Light Flushmount",
+  "145-24": "Gold - Island Pendant Light",
+
+  "145-25": "Light Bulb Swap - Full House Matching (<1500 sqft)",
+  "145-26": "Light Bulb Swap - Full House Matching (1500-2000 sqft)",
+  "145-27": "Light Bulb Swap - Full House Matching (2001-3000 sqft)",
+  "145-28": "Light Bulb Swap - Full House Matching (3000+ sqft)"
+};
+
 
 window.renderSummary = function renderSummary() {
   const holder = document.getElementById("summaryList");
@@ -582,7 +683,7 @@ window.renderSummary = function renderSummary() {
     return;
   }
 
-  // grupiši po serviceName
+  // group by serviceName
   const groups = {};
   lines.forEach(l => {
     const key = (l.serviceName || "Other").trim();
@@ -590,7 +691,6 @@ window.renderSummary = function renderSummary() {
     groups[key].push(l);
   });
 
-  // render
   let html = "";
   Object.keys(groups).forEach(service => {
     html += `<div style="margin-bottom:16px;">
@@ -598,16 +698,19 @@ window.renderSummary = function renderSummary() {
       <div style="display:flex;flex-direction:column;gap:8px;">`;
 
     groups[service].forEach(item => {
-      const id  = escapeHtml(item.itemId || "");
-      const qty = escapeHtml(String(item.qty ?? ""));
-      const desc = escapeHtml((item.description || "").trim());
+      const id = (item.itemId || "").trim();
+      const qty = String(item.qty ?? "").trim();
+      const notes = (item.description || "").trim();
+
+      const title = (ITEM_TITLES[id] || "").trim() || `Item ${id}`;
 
       html += `<div style="padding:10px 12px;border:1px solid #eee;border-radius:10px;">
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <div><b>Item:</b> ${id}</div>
-          <div><b>Qty:</b> ${qty}</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <div style="font-weight:600;">${escapeHtml(title)}</div>
+          <div style="opacity:0.8;">Qty: ${escapeHtml(qty)}</div>
+          <div style="opacity:0.45;font-size:12px;">(${escapeHtml(id)})</div>
         </div>
-        ${desc ? `<div style="margin-top:6px;opacity:0.9;"><b>Notes:</b> ${desc}</div>` : ""}
+        ${notes ? `<div style="margin-top:6px;opacity:0.9;"><b>Notes:</b> ${escapeHtml(notes)}</div>` : ""}
       </div>`;
     });
 
@@ -617,13 +720,13 @@ window.renderSummary = function renderSummary() {
   holder.innerHTML = html;
 };
 
-function escapeHtml(s) {
-  return String(s ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+function escapeHtml(str) {
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 
