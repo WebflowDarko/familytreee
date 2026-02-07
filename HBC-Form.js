@@ -638,6 +638,12 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       div.hidden = !match;
+
+      if (target === "summary" && window.renderSummary) {
+  setTimeout(window.renderSummary, 0);
+}
+
+       
       if (match) console.log(`✅ Showing step [${kind}]`, div.dataset);
     });
 
