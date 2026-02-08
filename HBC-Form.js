@@ -668,12 +668,97 @@ const ITEM_TITLES = {
 };
 
 
+// Summary -> Edit (pencil) routing
+const SUMMARY_EDIT_MAP_BY_SERVICE_NAME = {
+  "Carpet": "carpet",
+  "Bulb Update": "light",
+  "Light / Fan Fixtures": "light",
+
+  "Inside Paint": "inside_paint",
+  "Inside Paint - Cabinets": "inside_paint",
+
+  "Exterior Paint": "exterior_paint",
+
+  "Cabinet Knobs": "cabinet_hardware",
+  "Cabinet Pulls": "cabinet_hardware",
+
+  "Door Hardware": "door_hardware",
+  "Door Hardware - Dummy Knob": "door_hardware",
+  "Front Door Hardware": "door_hardware",
+  "Exterior Door Hardware (Other Doors)": "door_hardware",
+
+  "Cleaning": "cleaning",
+  "Landscaping": "landscaping",
+  "Handy-Man Service": "handyman",
+  "Handy-Man - Other": "handyman",
+
+  "Faucet / Toilet - Toilet Replacement": "faucet_toilet",
+  "Kitchen Sink Fixture Replacement": "faucet_toilet",
+  "Bathroom Vanity Sink Faucet Replacement": "faucet_toilet",
+};
+
+// ako želiš preciznije subIndex po itemId, možeš dopuniti ovde
+const SUMMARY_EDIT_SUBINDEX_BY_ITEMID = {
+  // primer (ako znaš tačno da je nešto na drugom sub-stepu):
+  // "110-3": 1,
+};
+
+function getEditTargetForLine(line) {
+  const serviceId = SUMMARY_EDIT_MAP_BY_SERVICE_NAME[(line.serviceName || "").trim()] || "";
+  const itemId = (line.itemId || "").trim();
+  const subIndex = Number(SUMMARY_EDIT_SUBINDEX_BY_ITEMID[itemId] ?? 0);
+  return { serviceId, subIndex };
+}
+
+function summaryPencilSvg() {
+  // mala olovčica (inline SVG)
+  return `
+    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M12 20h9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4 11.5-11.5Z"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+    </svg>
+  `;
+}
+
+// ✅ Summary pencil handler (bind once)
+(function bindSummaryEditOnce(){
+  if (window.__summaryEditBound) return;  // sprečava dupliranje
+  window.__summaryEditBound = true;
+
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-edit-service]");
+    if (!btn) return;
+
+    const serviceId = (btn.getAttribute("data-edit-service") || "").trim();
+    const subIndex = Number(btn.getAttribute("data-edit-subindex") || 0);
+    if (!serviceId) return;
+
+    const api = window.__wiz;
+    if (!api?.showOnly || !api?.state) {
+      console.warn("[SummaryEdit] Missing __wiz api");
+      return;
+    }
+
+    if (!api.state.selectedOrder?.includes?.(serviceId)) {
+      api.showOnly("select");
+      return;
+    }
+
+    api.showOnly({ type: "service", id: serviceId, subIndex: isNaN(subIndex) ? 0 : subIndex });
+  });
+})();
+
+
 window.renderSummary = function renderSummary() {
   const holder = document.getElementById("summaryList");
   if (!holder) {
     console.warn("[Summary] Missing #summaryList element on the page.");
     return;
   }
+
+   
+
 
   const lines = collectAllLineItems();
   if (!lines || !lines.length) {
@@ -698,21 +783,39 @@ window.renderSummary = function renderSummary() {
       <div style="display:flex;flex-direction:column;gap:8px;">`;
 
     groups[service].forEach(item => {
-      const id = (item.itemId || "").trim();
-      const qty = String(item.qty ?? "").trim();
-      const notes = (item.description || "").trim();
+  const id = (item.itemId || "").trim();
+  const qty = String(item.qty ?? "").trim();
+  const notes = (item.description || "").trim();
 
-      const title = (ITEM_TITLES[id] || "").trim() || `Item ${id}`;
+  const title = (ITEM_TITLES[id] || "").trim() || `Item ${id}`;
 
-      html += `<div style="padding:10px 12px;border:1px solid #eee;border-radius:10px;">
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-          <div style="font-weight:600;">${escapeHtml(title)}</div>
-          <div style="opacity:0.8;">Qty: ${escapeHtml(qty)}</div>
-          <div style="opacity:0.45;font-size:12px;">(${escapeHtml(id)})</div>
-        </div>
-        ${notes ? `<div style="margin-top:6px;opacity:0.9;"><b>Notes:</b> ${escapeHtml(notes)}</div>` : ""}
-      </div>`;
-    });
+  const edit = getEditTargetForLine(item);
+
+  html += `<div style="padding:10px 12px;border:1px solid #eee;border-radius:10px;">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <div style="font-weight:600;">${escapeHtml(title)}</div>
+        <div style="opacity:0.8;">Qty: ${escapeHtml(qty)}</div>
+        <div style="opacity:0.45;font-size:12px;">(${escapeHtml(id)})</div>
+      </div>
+
+      ${
+        edit.serviceId
+          ? `<button type="button"
+              data-edit-service="${escapeHtml(edit.serviceId)}"
+              data-edit-subindex="${escapeHtml(edit.subIndex)}"
+              style="display:inline-flex;align-items:center;gap:6px;border:1px solid #e6e6e6;background:#fff;border-radius:999px;padding:6px 10px;cursor:pointer;">
+              <span style="display:inline-flex;opacity:0.85;">${summaryPencilSvg()}</span>
+              <span style="font-size:12px;opacity:0.85;">Edit</span>
+            </button>`
+          : ``
+      }
+    </div>
+
+    ${notes ? `<div style="margin-top:6px;opacity:0.9;"><b>Notes:</b> ${escapeHtml(notes)}</div>` : ""}
+  </div>`;
+});
+
 
     html += `</div></div>`;
   });
