@@ -791,7 +791,7 @@ window.renderSummary = function renderSummary() {
 
   const edit = getEditTargetForLine(item);
 
-  html += `<div style="padding:10px 12px;border:1px solid #eee;border-radius:10px;">
+  html += `<div style="padding:10px 12px;border:1px solid #eee;border-radius:10px;background:#fff;">
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
         <div style="font-weight:600;">${escapeHtml(title)}</div>
