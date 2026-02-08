@@ -1663,14 +1663,24 @@ window.__wiz.gotoNext = gotoNext;
 
       (async () => {
   try {
-    await sendSubmissionToSheet(lines);
-    console.log("[Sheet] Submission sent.");
+    const ok = await sendSubmissionToSheet(lines);
+
+    if (ok) {
+      console.log("[Sheet] Submission sent. Redirecting to /success");
+      window.location.href = "/success";
+    } else {
+      console.warn("[Sheet] Submission failed (not ok response)");
+      alert("Something went wrong. Please try again.");
+    }
+
   } catch (err) {
     console.error("[Sheet] submit_all failed:", err);
+    alert("Submission failed. Please try again.");
   } finally {
     alreadySending = false;
   }
 })();
+
 
     });
   }
