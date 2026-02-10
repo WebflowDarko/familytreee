@@ -1315,8 +1315,96 @@ gotoNext = function() {
 window.__wiz.gotoNext = gotoNext;
 
 
+    /* =========================
+     UPLOAD PREVIEW helpers
+  ========================= */
+  (function injectUploadStyles(){
+    if (document.getElementById("hbc-upload-styles")) return;
+    const style = document.createElement("style");
+    style.id = "hbc-upload-styles";
+    style.textContent = `
+      .upload-preview{
+        display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;
+      }
+      .upload-thumb{
+        position:relative; width:72px; height:72px; border-radius:10px;
+        overflow:hidden; border:1px solid #eee; background:#fff;
+      }
+      .upload-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+      .upload-remove{
+        position:absolute; top:6px; right:6px; width:20px; height:20px;
+        border-radius:999px; border:1px solid rgba(0,0,0,0.12);
+        background:rgba(255,255,255,0.92); cursor:pointer;
+        display:flex; align-items:center; justify-content:center;
+        font-size:12px; line-height:1; padding:0;
+      }
+      .upload-spot.uploading { opacity: 0.75; pointer-events:none; }
+      .upload-spot.error { outline: 2px solid rgba(255,0,0,0.25); }
+    `;
+    document.head.appendChild(style);
+  })();
+
+  function ensurePreviewHolder(spot){
+    let holder = spot.querySelector(".upload-preview");
+    if (!holder) {
+      holder = document.createElement("div");
+      holder.className = "upload-preview";
+      spot.appendChild(holder);
+    }
+    return holder;
+  }
+
+  function getServiceId(spot){
+    return spot.dataset.service || "final_upload";
+  }
+
+  function getUploadList(serviceId){
+    window.wizardState.uploadUrls = window.wizardState.uploadUrls || {};
+    window.wizardState.uploadUrls[serviceId] = window.wizardState.uploadUrls[serviceId] || [];
+    return window.wizardState.uploadUrls[serviceId];
+  }
+
+  function renderUploadPreviewForSpot(spot){
+    const serviceId = getServiceId(spot);
+    const holder = ensurePreviewHolder(spot);
+    const urls = (getUploadList(serviceId) || []).filter(Boolean);
+
+    holder.innerHTML = "";
+
+    urls.forEach((url, idx) => {
+      const item = document.createElement("div");
+      item.className = "upload-thumb";
+
+      const img = document.createElement("img");
+      img.src = url;
+      img.alt = "Uploaded photo";
+
+      const rm = document.createElement("button");
+      rm.type = "button";
+      rm.className = "upload-remove";
+      rm.textContent = "✕";
+
+      rm.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const list = getUploadList(serviceId);
+        list.splice(idx, 1);
+        window.wizardState.uploadUrls[serviceId] = list;
+
+        renderUploadPreviewForSpot(spot);
+      });
+
+      item.appendChild(img);
+      item.appendChild(rm);
+      holder.appendChild(item);
+    });
+
+    holder.style.display = urls.length ? "flex" : "none";
+  }
+
   /* =========================
-     UPLOAD BIND
+     UPLOAD BIND (WITH THUMBNAILS)
   ========================= */
   document.querySelectorAll(".upload-spot").forEach(spot => {
     const img        = spot.querySelector(".upload-img");
@@ -1337,13 +1425,21 @@ window.__wiz.gotoNext = gotoNext;
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); }
     });
 
+    // render existing thumbs if user returns back / refresh
+    renderUploadPreviewForSpot(spot);
+
     input.addEventListener("change", async () => {
       const files = Array.from(input.files || []);
       if (!files.length) return;
 
       const bad = files.find(f => !f.type.startsWith("image/") || f.size > maxBytes);
-      if (bad) { alert(`"${bad.name}" is not an image or exceeds ${maxMB}MB.`); input.value = ""; return; }
+      if (bad) {
+        alert(`"${bad.name}" is not an image or exceeds ${maxMB}MB.`);
+        input.value = "";
+        return;
+      }
 
+      spot.classList.remove("error");
       spot.classList.add("uploading");
 
       try {
@@ -1352,14 +1448,19 @@ window.__wiz.gotoNext = gotoNext;
           const data = await uploadServicePhoto(f, serviceId, window.wizardState.sessionId);
           urls.push(data.secure_url);
         }
+
         window.wizardState.uploadUrls[serviceId] =
           (window.wizardState.uploadUrls[serviceId] || []).concat(urls);
 
         spot.classList.remove("uploading");
         spot.classList.add("uploaded");
-        try {
-          img.src = URL.createObjectURL(files[0]);
-        } catch {}
+
+        // optional: set main image preview to first local file
+        try { if (img) img.src = URL.createObjectURL(files[0]); } catch {}
+
+        // render thumbnails
+        renderUploadPreviewForSpot(spot);
+
       } catch (err) {
         console.error(err);
         spot.classList.remove("uploading");
@@ -1370,6 +1471,7 @@ window.__wiz.gotoNext = gotoNext;
       }
     });
   });
+
 
   /* =========================
      POPUP CATALOG OPEN/CLOSE + RADIO BORDER
