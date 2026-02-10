@@ -1768,9 +1768,23 @@ window.__wiz.gotoNext = gotoNext;
     const ok = await sendSubmissionToSheet(lines);
 
     if (ok) {
-      console.log("[Sheet] Submission sent. Redirecting to /success");
-      window.location.href = "/success";
-    } else {
+  console.log("[Sheet] Submission sent. Clearing storage + redirecting.");
+
+  // ✅ obriši Hubspot user (guard više neće pustiti nazad na wizard)
+  localStorage.removeItem("hs_form_user");
+
+  // ✅ (opciono) resetuj wizard state u memoriji
+  if (window.wizardState) {
+    window.wizardState.uploadUrls = {};
+    window.wizardState.homeSqft = null;
+    // sessionId možeš da ostaviš ili resetuješ, po želji
+  }
+
+  // ✅ redirect na success
+  window.location.replace("/success");
+  return;
+}
+ else {
       console.warn("[Sheet] Submission failed (not ok response)");
       alert("Something went wrong. Please try again.");
     }
