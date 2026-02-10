@@ -87,7 +87,12 @@ async function sendSubmissionToSheet(lines) {
   params.append("clientEmail", clientEmail);
   params.append("sessionId", window.wizardState?.sessionId || "wizard-session");
 
-  // 👇 šaljemo linije kao JSON string u jednom parametru
+  
+  const uploadObj = window.wizardState?.uploadUrls || {};
+  const allUploads = Object.values(uploadObj).flat().filter(Boolean);
+  params.append("uploads", allUploads.join("\n"));
+   
+   // 👇 šaljemo linije kao JSON string u jednom parametru
   params.append("lines", JSON.stringify(
     (lines || []).map(l => ({
       serviceName: l.serviceName || "",
