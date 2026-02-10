@@ -12,7 +12,7 @@ const ROOT_FOLDER   = "wizard_uploads";
 /* =========================
    SHEETS ENDPOINT
 ========================= */
-const SHEET_ENDPOINT = "https://script.google.com/macros/s/AKfycbxO-3bwR0fr6QR860cKbMkzziH1-hR6dnsyz1K5HEYxMqLGj096yNCuGec56sStIfjO/exec";
+const SHEET_ENDPOINT = "https://script.google.com/macros/s/AKfycbwwUhIW2a_vnG6YR4Ps_wyWrdumn5LuJZrGa8uBf0Tv6ccctE7JCOw2vQAJCIEW-W9G/exec";
 
 /* =========================
    GLOBAL STATE
