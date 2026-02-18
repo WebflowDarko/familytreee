@@ -562,7 +562,7 @@ if (itemDummy && !isNaN(dummyQty) && dummyQty > 0) {
       items.push({
         serviceName: "Light / Fan Fixtures",
         itemId,
-        qty: (!isNaN(qtyNum) && qtyNum > 0) ? qtyNum : 0
+        qty: (!isNaN(qtyNum) && qtyNum > 0) ? qtyNum : 1
       });
     }
   });
@@ -1156,7 +1156,7 @@ if (svc === "faucet_toilet") {
    QTY CONTROLS (+ / -) FINAL
 ========================= */
 (function initQtyControls() {
-  const MIN_QTY = 1;
+  const MIN_QTY = 0;
   const MAX_QTY = 99;
 
   function clamp(n) {
@@ -1215,7 +1215,7 @@ if (svc === "faucet_toilet") {
       cb.dispatchEvent(new Event("change", { bubbles: true }));
     }
 
-    const cur = clamp(cb.dataset.qty || numEl.textContent || 1);
+    const cur = clamp(cb.dataset.qty || numEl.textContent || 0);
 
     // odredi action
     let action = btn.getAttribute("data-qty-action");
@@ -1266,13 +1266,13 @@ document.addEventListener("change", (e) => {
     qtyBox.classList.add("is-visible");
 
     // init to 1 if empty
-    if (!cb.dataset.qty) cb.dataset.qty = "1";
+    if (!cb.dataset.qty) cb.dataset.qty = "0";
     if (num) num.textContent = cb.dataset.qty;
   } else {
     // hide + reset
     qtyBox.classList.remove("is-visible");
-    cb.dataset.qty = "1";
-    if (num) num.textContent = "1";
+    cb.dataset.qty = "0";
+    if (num) num.textContent = "0";
   }
 });
 
