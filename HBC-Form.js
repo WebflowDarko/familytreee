@@ -562,7 +562,7 @@ if (itemDummy && !isNaN(dummyQty) && dummyQty > 0) {
       items.push({
         serviceName: "Light / Fan Fixtures",
         itemId,
-        qty: (!isNaN(qtyNum) && qtyNum > 0) ? qtyNum : 1
+        qty: (!isNaN(qtyNum) && qtyNum > 0) ? qtyNum : 0
       });
     }
   });
