@@ -555,7 +555,7 @@ if (itemDummy && !isNaN(dummyQty) && dummyQty > 0) {
   const checkedFixtures = document.querySelectorAll(".fixture-checkbox:checked");
   checkedFixtures.forEach(cb => {
     const itemId = cb.dataset.itemId;
-    const qtyRaw = cb.dataset.qty || "1";
+    const qtyRaw = cb.dataset.qty || "0";
     const qtyNum = Number(qtyRaw);
 
     if (itemId) {
