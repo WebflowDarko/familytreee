@@ -1322,23 +1322,32 @@ document.addEventListener("change", (e) => {
   if (!itemId) return;
 
   const qtyBox = document.querySelector(`[data-qty-for="${itemId}"]`);
-  if (!qtyBox) return;
+  const num = qtyBox?.querySelector("[data-qty-value]");
 
-  const num = qtyBox.querySelector("[data-qty-value]");
+  // trenutna qty (iz dataset-a ili iz UI)
+  let q = Number(cb.dataset.qty ?? num?.textContent ?? 0);
+  if (isNaN(q)) q = 0;
 
   if (cb.checked) {
-    // show
-    qtyBox.classList.add("is-visible");
+    // ako se čekira, qty mora biti bar 1
+    if (q <= 0) q = 1;
 
-    // init to 1 if empty
-    if (!cb.dataset.qty) cb.dataset.qty = "0";
-    if (num) num.textContent = cb.dataset.qty;
+    cb.dataset.qty = String(q);
+    if (num) num.textContent = String(q);
+
+    // opcionalno: pokaži qty UI
+    qtyBox?.classList.add("is-visible");
   } else {
-    // hide + reset
-    qtyBox.classList.remove("is-visible");
+    // ako se odčekira, qty mora biti 0
     cb.dataset.qty = "0";
     if (num) num.textContent = "0";
+
+    // opcionalno: sakrij qty UI
+    qtyBox?.classList.remove("is-visible");
   }
+
+  // ✅ OVO TI FALI: osveži total posle change-a
+  updateQuantitySelectedUI();
 });
 
 
