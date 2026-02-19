@@ -1215,7 +1215,9 @@ if (svc === "faucet_toilet") {
       cb.dispatchEvent(new Event("change", { bubbles: true }));
     }
 
-    const cur = clamp(cb.dataset.qty || numEl.textContent || 0);
+   const cur = clamp(numEl.textContent || cb.dataset.qty || 0);
+cb.dataset.qty = String(cur); // sync da bude uvek isto
+
 
     // odredi action
     let action = btn.getAttribute("data-qty-action");
