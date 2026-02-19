@@ -842,6 +842,32 @@ function escapeHtml(str) {
    MAIN INIT (ONE DOMContentLoaded)
 ========================= */
 document.addEventListener("DOMContentLoaded", () => {
+   // =========================
+// QTY FEEDBACK (TOTAL SELECTED)
+// =========================
+function getTotalSelectedQty() {
+  let total = 0;
+
+  document.querySelectorAll(".fixture-checkbox[data-item-id]").forEach((cb) => {
+    const q = Number(cb.dataset.qty || 0);
+    if (!isNaN(q) && q > 0) total += q;
+  });
+
+  return total;
+}
+
+updateQuantitySelectedUI(); // inicijalno stanje na load
+
+function updateQuantitySelectedUI() {
+  const el = document.querySelector(".quantity-selected_text");
+  if (!el) return;
+
+  const total = getTotalSelectedQty();
+  el.textContent = `Quantity Selected: ${total}`;
+
+  // opciono: da dobije drugu boju kad je > 0
+  el.classList.toggle("is-active", total > 0);
+}
 
   /* =========================
      WIZARD CORE
@@ -1259,7 +1285,7 @@ cb.dataset.qty = String(cur); // sync da bude uvek isto
     cb.dispatchEvent(new Event("change", { bubbles: true }));
   }
 }
-
+updateQuantitySelectedUI();
 
     console.log("[QTY] itemId:", itemId, "qty:", finalQty);
   });
@@ -1281,27 +1307,20 @@ document.addEventListener("change", (e) => {
 
   const num = qtyBox.querySelector("[data-qty-value]");
 
-  // ==== current qty ====
-  let q = Number(cb.dataset.qty || num?.textContent || 0);
-  if (isNaN(q)) q = 0;
-
-  // ✅ RULE: checked => qty >= 1, unchecked => qty = 0
   if (cb.checked) {
-    if (q <= 0) q = 1;
-    cb.dataset.qty = String(q);
-    if (num) num.textContent = String(q);
-
     // show
     qtyBox.classList.add("is-visible");
+
+    // init to 1 if empty
+    if (!cb.dataset.qty) cb.dataset.qty = "0";
+    if (num) num.textContent = cb.dataset.qty;
   } else {
+    // hide + reset
+    qtyBox.classList.remove("is-visible");
     cb.dataset.qty = "0";
     if (num) num.textContent = "0";
-
-    // hide
-    qtyBox.classList.remove("is-visible");
   }
 });
-
 
 
    
