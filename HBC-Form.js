@@ -1281,20 +1281,27 @@ document.addEventListener("change", (e) => {
 
   const num = qtyBox.querySelector("[data-qty-value]");
 
+  // ==== current qty ====
+  let q = Number(cb.dataset.qty || num?.textContent || 0);
+  if (isNaN(q)) q = 0;
+
+  // ✅ RULE: checked => qty >= 1, unchecked => qty = 0
   if (cb.checked) {
+    if (q <= 0) q = 1;
+    cb.dataset.qty = String(q);
+    if (num) num.textContent = String(q);
+
     // show
     qtyBox.classList.add("is-visible");
-
-    // init to 1 if empty
-    if (!cb.dataset.qty) cb.dataset.qty = "0";
-    if (num) num.textContent = cb.dataset.qty;
   } else {
-    // hide + reset
-    qtyBox.classList.remove("is-visible");
     cb.dataset.qty = "0";
     if (num) num.textContent = "0";
+
+    // hide
+    qtyBox.classList.remove("is-visible");
   }
 });
+
 
 
    
