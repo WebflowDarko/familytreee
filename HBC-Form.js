@@ -1210,10 +1210,14 @@ if (svc === "faucet_toilet") {
     }
 
     // auto-check ako nije čekiran
-    if (!cb.checked) {
-      cb.checked = true;
-      cb.dispatchEvent(new Event("change", { bubbles: true }));
-    }
+   if (!cb.checked) {
+  cb.dataset.qty = "0";
+  numEl.textContent = "0";
+
+  cb.checked = true;
+  cb.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
 
    const cur = clamp(numEl.textContent || cb.dataset.qty || 0);
 cb.dataset.qty = String(cur); // sync da bude uvek isto
