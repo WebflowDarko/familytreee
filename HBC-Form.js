@@ -849,25 +849,33 @@ function getTotalSelectedQty() {
   let total = 0;
 
   document.querySelectorAll(".fixture-checkbox[data-item-id]").forEach((cb) => {
+    if (!cb.checked) return; // ✅ samo stvarno selektovani
+
     const q = Number(cb.dataset.qty || 0);
-    if (!isNaN(q) && q > 0) total += q;
+    if (!isNaN(q) && q > 0) total += q; // ✅ sabira količine
   });
 
   return total;
 }
 
-updateQuantitySelectedUI(); // inicijalno stanje na load
+
 
 function updateQuantitySelectedUI() {
   const el = document.querySelector(".quantity-selected_text");
   if (!el) return;
 
   const total = getTotalSelectedQty();
-  el.textContent = `Quantity Selected: ${total}`;
 
-  // opciono: da dobije drugu boju kad je > 0
-  el.classList.toggle("is-active", total > 0);
+  // ✅ sakrij dok je 0
+  if (total <= 0) {
+    el.style.display = "none";
+    return;
+  }
+
+  el.style.display = "";
+  el.textContent = `Quantity Selected: ${total}`;
 }
+
 
   /* =========================
      WIZARD CORE
@@ -877,7 +885,18 @@ function updateQuantitySelectedUI() {
    
    console.log("✅ HBC INIT RUNNING (Webflow.push)");
 
-
+updateQuantitySelectedUI(); // inicijalno stanje na load
+function normalizeFixtureQtyState() {
+  document.querySelectorAll(".fixture-checkbox[data-item-id]").forEach((cb) => {
+    if (!cb.checked) {
+      cb.dataset.qty = "0"; // ✅ ništa nije selektovano => qty 0
+    } else {
+      // ako je checked, qty mora biti >= 1
+      let q = Number(cb.dataset.qty || 0);
+      if (isNaN(q) || q <= 0) cb.dataset.qty = "1";
+    }
+  });
+}
 
   // FLOW definition (shared)
   const FLOW = {
