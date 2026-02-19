@@ -1247,6 +1247,20 @@ cb.dataset.qty = String(cur); // sync da bude uvek isto
     // update UI broj
     numEl.textContent = String(finalQty);
 
+   // ✅ kartica selektovana samo ako je qty > 0
+   if (next > 0) {
+     if (!cb.checked) {
+       cb.checked = true;
+       cb.dispatchEvent(new Event("change", { bubbles: true }));
+     }
+   } else {
+     if (cb.checked) {
+       cb.checked = false;
+    cb.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+}
+
+
     console.log("[QTY] itemId:", itemId, "qty:", finalQty);
   });
 
