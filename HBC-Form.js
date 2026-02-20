@@ -902,7 +902,7 @@ function normalizeFixtureQtyState() {
   const FLOW = {
     carpet:         ['carpet_details', 'carpet_details2'],
     light:          ['light_questions','light_type'],
-    inside_paint:   ['paint_details', 'light_questions2', 'color_scheme'],
+    inside_paint: ["inside_paint_scope", "inside_paint_needs", "inside_paint_color_scheme"],
     exterior_paint: ['ext_paint', 'ext_paint2'],
     cabinet_hardware: ['replace_question', 'counts', 'finish'],
     door_hardware: ['door_details','door_details_ext','door_style'],
@@ -1083,6 +1083,28 @@ if (svc === "faucet_toilet") {
     } else if (ans === "yes") {
       // vrati normalan flow
       FLOW[svc] = ["faucet_toilet_details", "faucet_toilet_details2", "faucet_toilet_details3"];
+    }
+  }
+}
+       // ✅ Inside Paint: grananje posle scope pitanja (YES/NO)
+if (svc === "inside_paint") {
+  const SCOPE_SUB = "inside_paint_scope";
+  const GROUP = "inside_paint_scope"; // radio group name
+
+  const curSubId = (FLOW[svc] || [])[state.current.subIndex];
+
+  if (curSubId === SCOPE_SUB) {
+    const active = document.querySelector(
+      `.step[data-step="service"][data-service="inside_paint"][data-sub="${SCOPE_SUB}"]:not([hidden])`
+    );
+
+    const r = active?.querySelector(`input[name="${GROUP}"]:checked`);
+    const ans = (r?.value || "").trim().toLowerCase();
+
+    if (ans === "yes") {
+      FLOW[svc] = ["inside_paint_scope", "inside_paint_needs", "inside_paint_color_scheme"];
+    } else if (ans === "no") {
+      FLOW[svc] = ["inside_paint_scope", "inside_paint_areas", "inside_paint_color_scheme"];
     }
   }
 }
