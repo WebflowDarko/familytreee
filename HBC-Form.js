@@ -263,8 +263,8 @@ function collectAllLineItems() {
     : NaN;
 
   const insidePaintChecks = document.querySelectorAll(
-    'input[type="checkbox"][name="inside_paint_scope"]:checked'
-  );
+  'input[type="checkbox"][name="inside_paint_scope"]:checked, input[type="checkbox"][name="inside_paint_areas"]:checked'
+);
 
   const schemeDescription = getInsidePaintSchemeDescription();
 
