@@ -253,36 +253,24 @@ function collectAllLineItems() {
     }
   }
 
-  // 4) INSIDE PAINT (110-1, 110-2) + scheme description
-  const insidePaintSqftEl =
-    document.getElementById("inside-paint-sqft") ||
-    document.querySelector('input[name="inside_paint_sqft"]');
-
-  const insidePaintQty = insidePaintSqftEl
-    ? Number((insidePaintSqftEl.value || "").trim())
-    : NaN;
-
-  const insidePaintChecks = document.querySelectorAll(
+  // 4) INSIDE PAINT (no sqft required) + scheme description
+const insidePaintChecks = document.querySelectorAll(
   'input[type="checkbox"][name="inside_paint_scope"]:checked, input[type="checkbox"][name="inside_paint_areas"]:checked'
 );
 
-  const schemeDescription = getInsidePaintSchemeDescription();
+const schemeDescription = getInsidePaintSchemeDescription();
 
-  insidePaintChecks.forEach(cb => {
-    const itemId = (cb.dataset.itemId || cb.getAttribute("data-item-id") || "").trim();
-    if (!itemId) return;
+insidePaintChecks.forEach(cb => {
+  const itemId = (cb.dataset.itemId || cb.getAttribute("data-item-id") || "").trim();
+  if (!itemId) return;
 
-    if (!isNaN(insidePaintQty) && insidePaintQty > 0) {
-      items.push({
-        serviceName: "Inside Paint",
-        itemId,
-        qty: insidePaintQty,
-        description: schemeDescription
-      });
-    } else {
-      console.warn("[Collect] Inside Paint: missing valid sqft");
-    }
+  items.push({
+    serviceName: "Inside Paint",
+    itemId,
+    qty: 1, // ✅ default qty since sqft input was removed
+    description: schemeDescription
   });
+});
 
   // 5) INSIDE PAINT – CABINETS (110-3)
   const cabinetAnswer = document.querySelector('input[name="inside_paint_cabinets"]:checked');
