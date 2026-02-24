@@ -308,25 +308,24 @@ insidePaintChecks.forEach(cb => {
   const itemId = (cb.dataset.itemId || cb.getAttribute("data-item-id") || "").trim();
   if (!itemId) return;
 
-  // ✅ default
+  // default
   let qty = 1;
+
+  // ✅ qty input vezan na itemId (npr. data-qty-for="110-18")
+  const qtyEl = document.querySelector(`input[data-qty-for="${CSS.escape(itemId)}"]`);
+  if (qtyEl) {
+    const n = Number((qtyEl.value || "").trim());
+    if (!isNaN(n) && n > 0) qty = n;
+  }
+
+  // ✅ notes input vezan na itemId (npr. data-notes-for="110-27")
   let extraNotes = "";
-
-  // ✅ Secondary bedroom + Secondary bathroom -> qty iz inputa ispod
-  // OVDE upiši TAČNE itemId vrednosti za ova dva checkboxa
-  if (itemId === "110-11" || itemId === "110-12") {
-    const n = getNearestCountInputValue(cb);
-    qty = (!isNaN(n) && n > 0) ? n : 1;
+  const notesEl = document.querySelector(`[data-notes-for="${CSS.escape(itemId)}"]`);
+  if (notesEl) {
+    extraNotes = String(notesEl.value || "").trim();
   }
 
-  // ✅ Miscellaneous -> opis (notes), ne qty
-  // OVDE upiši TAČAN itemId za Misc checkbox
-  if (itemId === "110-13") {
-    extraNotes = getNearestTextInputValue(cb);
-    qty = 1;
-  }
-
-  // spoji scheme + notes
+  // scheme + notes
   let description = (schemeDescription || "").trim();
   if (extraNotes) description = description ? `${description}, ${extraNotes}` : extraNotes;
 
