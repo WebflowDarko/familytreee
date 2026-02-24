@@ -1555,70 +1555,151 @@ window.__wiz.gotoNext = gotoNext;
      UPLOAD BIND (WITH THUMBNAILS)
   ========================= */
   document.querySelectorAll(".upload-spot").forEach(spot => {
-    const img        = spot.querySelector(".upload-img");
-    const input      = spot.querySelector(".upload-input");
-    const serviceId  = spot.dataset.service || "final_upload";
-    const multiple   = spot.dataset.multiple === "false" ? false : true;
-    const maxMB      = parseInt(spot.dataset.maxMb || "40", 10);
-    const maxBytes   = maxMB * 1024 * 1024;
+  const img        = spot.querySelector(".upload-img");
+  const input      = spot.querySelector(".upload-input");
+  const serviceId  = spot.dataset.service || "final_upload";
+  const multiple   = spot.dataset.multiple === "false" ? false : true;
+  const maxMB      = parseInt(spot.dataset.maxMb || "40", 10);
+  const maxBytes   = maxMB * 1024 * 1024;
 
-    if (!input) return;
+  if (!input) return;
 
-    if (multiple) input.setAttribute("multiple",""); else input.removeAttribute("multiple");
+  // ✅ status UI (spinner + text)
+  let status = spot.querySelector(".upload-status");
+  if (!status) {
+    status = document.createElement("div");
+    status.className = "upload-status";
+    status.innerHTML = `
+      <span class="upload-spinner"></span>
+      <span class="upload-status-text"></span>
+    `;
+    spot.appendChild(status);
+  }
 
-    img?.addEventListener("click", () => input.click());
-    spot.setAttribute("tabindex","0");
-    spot.setAttribute("role","button");
-    spot.addEventListener("keydown", e=>{
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); }
-    });
+  const statusText = status.querySelector(".upload-status-text");
 
-    // render existing thumbs if user returns back / refresh
-    renderUploadPreviewForSpot(spot);
+  // init hidden text
+  if (statusText) statusText.textContent = "";
 
-    input.addEventListener("change", async () => {
-      const files = Array.from(input.files || []);
-      if (!files.length) return;
+  if (multiple) input.setAttribute("multiple", ""); else input.removeAttribute("multiple");
 
-      const bad = files.find(f => !f.type.startsWith("image/") || f.size > maxBytes);
-      if (bad) {
-        alert(`"${bad.name}" is not an image or exceeds ${maxMB}MB.`);
-        input.value = "";
-        return;
-      }
-
-      spot.classList.remove("error");
-      spot.classList.add("uploading");
-
-      try {
-        const urls = [];
-        for (const f of files) {
-          const data = await uploadServicePhoto(f, serviceId, window.wizardState.sessionId);
-          urls.push(data.secure_url);
-        }
-
-        window.wizardState.uploadUrls[serviceId] =
-          (window.wizardState.uploadUrls[serviceId] || []).concat(urls);
-
-        spot.classList.remove("uploading");
-        spot.classList.add("uploaded");
-
-        // optional: set main image preview to first local file
-        try { if (img) img.src = URL.createObjectURL(files[0]); } catch {}
-
-        // render thumbnails
-        renderUploadPreviewForSpot(spot);
-
-      } catch (err) {
-        console.error(err);
-        spot.classList.remove("uploading");
-        spot.classList.add("error");
-        alert("Upload failed. Please try again.");
-      } finally {
-        input.value = "";
-      }
-    });
+  img?.addEventListener("click", () => input.click());
+  spot.setAttribute("tabindex", "0");
+  spot.setAttribute("role", "button");
+  spot.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      input.click();
+    }
   });
+
+  // render existing thumbs if user returns back / refresh
+  renderUploadPreviewForSpot(spot);
+
+  input.addEventListener("change", async () => {
+    const files = Array.from(input.files || []);
+    if (!files.length) return;
+
+    const bad = files.find(f => !f.type.startsWith("image/") || f.size > maxBytes);
+    if (bad) {
+      alert(`"${bad.name}" is not an image or exceeds ${maxMB}MB.`);
+      input.value = "";
+      return;
+    }
+
+    // ✅ set UI state
+    spot.classList.remove("error");
+    spot.classList.add("uploading");
+
+    // ✅ lock Next + show status text
+    try { uploadStart(); } catch(e) { /* if not defined, ignore */ }
+    if (statusText) statusText.textContent = "Uploading...";
+
+    try {
+      const urls = [];
+
+      for (const f of files) {
+        const data = await uploadServicePhoto(f, serviceId, window.wizardState.sessionId);
+        urls.push(data.secure_url);
+      }
+
+      window.wizardState.uploadUrls[serviceId] =
+        (window.wizardState.uploadUrls[serviceId] || []).concat(urls);
+
+      spot.classList.add("uploaded");
+
+      // ✅ status success
+      if (statusText) statusText.textContent = "Uploaded ✓";
+
+      // optional: set main image preview to first local file
+      try { if (img) img.src = URL.createObjectURL(files[0]); } catch {}
+
+      // render thumbnails
+      renderUploadPreviewForSpot(spot);
+
+    } catch (err) {
+      console.error(err);
+      spot.classList.add("error");
+
+      // ✅ status fail
+      if (statusText) statusText.textContent = "Upload failed. Try again.";
+
+      alert("Upload failed. Please try again.");
+    } finally {
+      // ✅ ALWAYS remove uploading state + unlock Next + clear input
+      spot.classList.remove("uploading");
+
+      try { uploadEnd(); } catch(e) { /* if not defined, ignore */ }
+
+      input.value = "";
+    }
+  });
+});
+
+   // =========================
+// UPLOAD LOCK (disable Next while uploading)
+// =========================
+window.__UPLOAD = window.__UPLOAD || { active: 0 };
+
+function setNextButtonsDisabled(disabled) {
+  // disable next button only on currently visible step
+  const step = document.querySelector(".step:not([hidden])");
+  if (!step) return;
+
+  const btn = step.querySelector('[data-action="next"]');
+  if (!btn) return;
+
+  btn.disabled = !!disabled;
+
+  if (disabled) {
+    btn.style.opacity = "0.6";
+    btn.style.pointerEvents = "none";
+    btn.style.cursor = "not-allowed";
+  } else {
+    btn.style.opacity = "";
+    btn.style.pointerEvents = "";
+    btn.style.cursor = "";
+  }
+}
+
+function uploadStart() {
+  window.__UPLOAD.active += 1;
+  setNextButtonsDisabled(true);
+}
+
+function uploadEnd() {
+  window.__UPLOAD.active = Math.max(0, window.__UPLOAD.active - 1);
+  if (window.__UPLOAD.active === 0) setNextButtonsDisabled(false);
+}
+
+// Kad se menja step (Next/Back), osveži stanje dugmeta
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest('[data-action="next"], [data-action="back"]');
+  if (!btn) return;
+  setTimeout(() => {
+    setNextButtonsDisabled(window.__UPLOAD.active > 0);
+  }, 0);
+}, true);
 
 
   /* =========================
