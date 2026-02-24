@@ -1577,15 +1577,13 @@ window.__wiz.gotoNext = gotoNext;
   }
 
   const statusText = status.querySelector(".upload-status-text");
-
-  // init hidden text
   if (statusText) statusText.textContent = "";
 
-  if (multiple) input.setAttribute("multiple", ""); else input.removeAttribute("multiple");
+  if (multiple) input.setAttribute("multiple",""); else input.removeAttribute("multiple");
 
   img?.addEventListener("click", () => input.click());
-  spot.setAttribute("tabindex", "0");
-  spot.setAttribute("role", "button");
+  spot.setAttribute("tabindex","0");
+  spot.setAttribute("role","button");
   spot.addEventListener("keydown", e => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -1612,7 +1610,7 @@ window.__wiz.gotoNext = gotoNext;
     spot.classList.add("uploading");
 
     // ✅ lock Next + show status text
-    try { uploadStart(); } catch(e) { /* if not defined, ignore */ }
+    try { uploadStart(); } catch(e) {}
     if (statusText) statusText.textContent = "Uploading...";
 
     try {
@@ -1631,8 +1629,7 @@ window.__wiz.gotoNext = gotoNext;
       // ✅ status success
       if (statusText) statusText.textContent = "Uploaded ✓";
 
-      // optional: set main image preview to first local file
-      try { if (img) img.src = URL.createObjectURL(files[0]); } catch {}
+      // ✅ NE MENJAMO upload ikonicu (upload-img) NAMERNO
 
       // render thumbnails
       renderUploadPreviewForSpot(spot);
@@ -1641,15 +1638,12 @@ window.__wiz.gotoNext = gotoNext;
       console.error(err);
       spot.classList.add("error");
 
-      // ✅ status fail
       if (statusText) statusText.textContent = "Upload failed. Try again.";
-
       alert("Upload failed. Please try again.");
     } finally {
-      // ✅ ALWAYS remove uploading state + unlock Next + clear input
       spot.classList.remove("uploading");
 
-      try { uploadEnd(); } catch(e) { /* if not defined, ignore */ }
+      try { uploadEnd(); } catch(e) {}
 
       input.value = "";
     }
