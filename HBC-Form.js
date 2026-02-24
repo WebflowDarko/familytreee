@@ -213,10 +213,54 @@ function getCheckedValue(name) {
   return (r?.value || "").trim();
 }
 
+
+
 function getInsidePaintSchemeDescription() {
   const r = document.querySelector('input[name="inside_paint_color_scheme"]:checked');
   if (!r) return "";
   return (r.dataset.desc || r.value || "").trim();
+}
+
+
+// ✅ Helpers for Inside Paint qty / notes
+function getNearestCountInputValue(cb) {
+  const wrap =
+    cb.closest(".checkbox-formly") ||
+    cb.closest("label") ||
+    cb.closest(".w-checkbox") ||
+    cb.parentElement;
+
+  if (!wrap) return NaN;
+
+  // 1) try inside same wrapper
+  let input = wrap.querySelector('input[type="number"], input[type="text"]');
+
+  // 2) fallback: next sibling block (your arrow -> input row)
+  if (!input) {
+    const next = wrap.nextElementSibling;
+    if (next) input = next.querySelector('input[type="number"], input[type="text"]');
+  }
+
+  const n = Number(String(input?.value || "").trim());
+  return (!isNaN(n) && n > 0) ? n : NaN;
+}
+
+function getNearestTextInputValue(cb) {
+  const wrap =
+    cb.closest(".checkbox-formly") ||
+    cb.closest("label") ||
+    cb.closest(".w-checkbox") ||
+    cb.parentElement;
+
+  if (!wrap) return "";
+
+  let input = wrap.querySelector('input[type="text"], textarea');
+  if (!input) {
+    const next = wrap.nextElementSibling;
+    if (next) input = next.querySelector('input[type="text"], textarea');
+  }
+
+  return String(input?.value || "").trim();
 }
 
 /* =========================
@@ -264,11 +308,33 @@ insidePaintChecks.forEach(cb => {
   const itemId = (cb.dataset.itemId || cb.getAttribute("data-item-id") || "").trim();
   if (!itemId) return;
 
+  // ✅ default
+  let qty = 1;
+  let extraNotes = "";
+
+  // ✅ Secondary bedroom + Secondary bathroom -> qty iz inputa ispod
+  // OVDE upiši TAČNE itemId vrednosti za ova dva checkboxa
+  if (itemId === "110-11" || itemId === "110-12") {
+    const n = getNearestCountInputValue(cb);
+    qty = (!isNaN(n) && n > 0) ? n : 1;
+  }
+
+  // ✅ Miscellaneous -> opis (notes), ne qty
+  // OVDE upiši TAČAN itemId za Misc checkbox
+  if (itemId === "110-13") {
+    extraNotes = getNearestTextInputValue(cb);
+    qty = 1;
+  }
+
+  // spoji scheme + notes
+  let description = (schemeDescription || "").trim();
+  if (extraNotes) description = description ? `${description}, ${extraNotes}` : extraNotes;
+
   items.push({
     serviceName: "Inside Paint",
     itemId,
-    qty: 1, // ✅ default qty since sqft input was removed
-    description: schemeDescription
+    qty,
+    description
   });
 });
 
