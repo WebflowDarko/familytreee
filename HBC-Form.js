@@ -604,17 +604,27 @@ if (itemDummy && !isNaN(dummyQty) && dummyQty > 0) {
     items.push({ serviceName: "Handy-Man - Other", itemId: "125-7", qty: 1, description: handymanOtherVal });
   }
 
-  // 3) LIGHT / FAN FIXTURES catalog
   const checkedFixtures = document.querySelectorAll(".fixture-checkbox:checked");
 checkedFixtures.forEach(cb => {
     const itemId = cb.dataset.itemId;
-    if (!itemId || !itemId.startsWith("145-")) return;
+    if (!itemId) return;
+
+    // ✅ preskoči ako je već pokupljeno u nekom ranijem bloku
+    if (items.some(i => i.itemId === itemId)) return;
 
     const qtyRaw = cb.dataset.qty || "0";
     const qtyNum = Number(qtyRaw);
 
+    // ✅ odredi servis po prefixu
+    let serviceName = "Light / Fan Fixtures";
+    if (itemId.startsWith("130-")) {
+      if (["130-2","130-3","130-4"].includes(itemId)) serviceName = "Kitchen Sink Fixture Replacement";
+      else if (["130-5","130-6","130-7"].includes(itemId)) serviceName = "Bathroom Vanity Sink Faucet Replacement";
+      else serviceName = "Faucet / Toilet";
+    }
+
     items.push({
-      serviceName: "Light / Fan Fixtures",
+      serviceName,
       itemId,
       qty: (!isNaN(qtyNum) && qtyNum > 0) ? qtyNum : 0
     });
