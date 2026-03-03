@@ -1187,12 +1187,14 @@ if (svc === "inside_paint") {
 
     if (state.current === 'intro') return;
     if (state.current === 'select') { showOnly('intro'); return; }
+    if (state.current === 'summary') { showOnly('upload'); return; }
 
     if (state.current === 'upload') {
       const done = state.selectedOrder.filter(s => state.completedServices.has(s));
       if (done.length) {
         const lastSvc = done[done.length - 1];
         const flow = FLOW[lastSvc] || [];
+        state.completedServices.delete(lastSvc);
         showOnly({ type:'service', id:lastSvc, subIndex: flow.length - 1 });
       } else {
         showOnly('select');
@@ -1200,13 +1202,31 @@ if (svc === "inside_paint") {
       return;
     }
 
-    if (state.current === 'success') { showOnly('upload'); return; }
+    if (state.current === 'success') { showOnly('summary'); return; }
 
     if (typeof state.current === 'object' && state.current.type === 'service') {
       const svc = state.current.id;
       const idx = state.current.subIndex;
-      if (idx > 0) showOnly({ type:'service', id: svc, subIndex: idx - 1 });
-      else showOnly('select');
+
+      if (idx > 0) {
+        showOnly({ type:'service', id: svc, subIndex: idx - 1 });
+      } else {
+        const svcIndex = state.selectedOrder.indexOf(svc);
+
+        if (svcIndex > 0) {
+          const prevSvc = state.selectedOrder[svcIndex - 1];
+          const prevFlow = FLOW[prevSvc] || [];
+          state.completedServices.delete(prevSvc);
+
+          if (prevFlow.length > 0) {
+            showOnly({ type:'service', id: prevSvc, subIndex: prevFlow.length - 1 });
+          } else {
+            showOnly('select');
+          }
+        } else {
+          showOnly('select');
+        }
+      }
     }
 
     logState("AFTER gotoBack");
