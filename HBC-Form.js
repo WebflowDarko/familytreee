@@ -606,18 +606,18 @@ if (itemDummy && !isNaN(dummyQty) && dummyQty > 0) {
 
   // 3) LIGHT / FAN FIXTURES catalog
   const checkedFixtures = document.querySelectorAll(".fixture-checkbox:checked");
-  checkedFixtures.forEach(cb => {
+checkedFixtures.forEach(cb => {
     const itemId = cb.dataset.itemId;
+    if (!itemId || !itemId.startsWith("145-")) return;
+
     const qtyRaw = cb.dataset.qty || "0";
     const qtyNum = Number(qtyRaw);
 
-    if (itemId) {
-      items.push({
-        serviceName: "Light / Fan Fixtures",
-        itemId,
-        qty: (!isNaN(qtyNum) && qtyNum > 0) ? qtyNum : 0
-      });
-    }
+    items.push({
+      serviceName: "Light / Fan Fixtures",
+      itemId,
+      qty: (!isNaN(qtyNum) && qtyNum > 0) ? qtyNum : 0
+    });
   });
 
   console.log("[Collect] Final items:", items);
