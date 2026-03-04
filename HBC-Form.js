@@ -908,35 +908,31 @@ document.addEventListener("DOMContentLoaded", () => {
    // =========================
 // QTY FEEDBACK (TOTAL SELECTED)
 // =========================
-function getTotalSelectedQty() {
+function getTotalSelectedQtyByPrefix(prefix) {
   let total = 0;
-
   document.querySelectorAll(".fixture-checkbox[data-item-id]").forEach((cb) => {
-    if (!cb.checked) return; // ✅ samo stvarno selektovani
-
+    if (!cb.checked) return;
+    const itemId = cb.dataset.itemId || "";
+    if (prefix && !itemId.startsWith(prefix)) return;
     const q = Number(cb.dataset.qty || 0);
-    if (!isNaN(q) && q > 0) total += q; // ✅ sabira količine
+    if (!isNaN(q) && q > 0) total += q;
   });
-
   return total;
 }
 
-
-
 function updateQuantitySelectedUI() {
-  const el = document.querySelector(".quantity-selected_text");
-  if (!el) return;
+  document.querySelectorAll(".quantity-selected_text").forEach((el) => {
+    const prefix = (el.dataset.qtyPrefix || "").trim();
+    const total = getTotalSelectedQtyByPrefix(prefix);
 
-  const total = getTotalSelectedQty();
+    if (total <= 0) {
+      el.style.display = "none";
+      return;
+    }
 
-  // ✅ sakrij dok je 0
-  if (total <= 0) {
-    el.style.display = "none";
-    return;
-  }
-
-  el.style.display = "";
-  el.textContent = `Quantity Selected: ${total}`;
+    el.style.display = "";
+    el.textContent = `Quantity Selected: ${total}`;
+  });
 }
 
 
