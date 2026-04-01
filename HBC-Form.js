@@ -330,7 +330,7 @@ insidePaintChecks.forEach(cb => {
   if (extraNotes) description = description ? `${description}, ${extraNotes}` : extraNotes;
 
   items.push({
-    serviceName: "Inside Paint",
+    serviceName: "Interior Paint",
     itemId,
     qty,
     description
