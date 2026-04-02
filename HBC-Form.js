@@ -348,7 +348,7 @@ insidePaintChecks.forEach(cb => {
 
     if (!isNaN(doorsQty) && doorsQty > 0) {
       items.push({
-        serviceName: "Inside Paint - Cabinets",
+        serviceName: "Interior Paint - Cabinets",
         itemId: "110-3",
         qty: doorsQty
       });
@@ -758,8 +758,8 @@ const SUMMARY_EDIT_MAP_BY_SERVICE_NAME = {
   "Bulb Update": "light",
   "Light / Fan Fixtures": "light",
 
-  "Inside Paint": "inside_paint",
-  "Inside Paint - Cabinets": "inside_paint",
+  "Interior Paint": "inside_paint",
+  "Interior Paint - Cabinets": "inside_paint",
 
   "Exterior Paint": "exterior_paint",
 
