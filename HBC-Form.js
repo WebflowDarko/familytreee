@@ -979,7 +979,7 @@ function normalizeFixtureQtyState() {
     light:          ['light_questions','light_type'],
     inside_paint: ["inside_paint_scope", "inside_paint_needs", "inside_paint_color_scheme"],
     exterior_paint: ['ext_paint', 'ext_paint2'],
-    cabinet_hardware: ['replace_question', 'counts', 'finish'],
+    cabinet_hardware: ['replace_question', 'finish', 'counts'],
     door_hardware: ['door_details','door_details_ext','door_style'],
     cleaning: ['cleaning_details'],
     landscaping: ['landscaping_details'],
@@ -2184,8 +2184,8 @@ document.addEventListener("click", (e) => {
     const CABINET_REPLACE_GROUP = "cabinet_replace";
     const SERVICE = "cabinet_hardware";
     const SUB1 = "replace_question";
-    const SUB2 = "counts";
-    const SUB3 = "finish";
+    const SUB2 = "finish";
+    const SUB3 = "counts";
 
     function getVal() {
       const r = document.querySelector(`input[name="${CABINET_REPLACE_GROUP}"]:checked`);
