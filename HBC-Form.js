@@ -5,14 +5,14 @@ console.log("HBC-Form.js LOADED");
 /* =========================
    CLOUDINARY CONFIG
 ========================= */
-const CLOUD_NAME    = "da95wtjhp";
-const UPLOAD_PRESET = "wizard_unsigned";
+const CLOUD_NAME    = "dwwcrhxjw";
+const UPLOAD_PRESET = "readyco_unsigned";
 const ROOT_FOLDER   = "wizard_uploads";
 
 /* =========================
    SHEETS ENDPOINT
 ========================= */
-const SHEET_ENDPOINT = "https://script.google.com/macros/s/AKfycbx8FaSXA6pY1guxJYaylE68nApQ7-mN_kn-pYkC1sD9jUfWh59wYSwLXbRQL2aQVfkQ/exec";
+const SHEET_ENDPOINT = "https://script.google.com/macros/s/AKfycbzvgszUnIANZmAN5qjCY6_XnqpsYL1US0mo2rSc-gV7j8jIbMFxpo74c8J2kEpC4zp5/exec";
 
 /* =========================
    GLOBAL STATE
